@@ -5,9 +5,9 @@ import sys
 import threading
 from typing import Any, Callable, Dict, Optional
 from pygls.server import LanguageServer
-from server.builder import JacAstBuilder
-from server.document_symbols import get_document_symbols
-from server.passes import ArchitypePass
+from builder import JacAstBuilder
+from document_symbols import get_document_symbols
+from passes import ArchitypePass
 
 if sys.version_info < (3, 10):
     from typing_extensions import ParamSpec

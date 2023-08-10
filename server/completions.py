@@ -26,7 +26,7 @@ from lsprotocol.types import (
     InsertTextFormat,
 )
 
-from server.architypes_utils import get_architype_class
+from architypes_utils import get_architype_class
 
 
 std_actions = [

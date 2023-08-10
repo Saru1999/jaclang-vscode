@@ -1,0 +1,7 @@
+{
+	"jac.PythonPath": "/home/ubuntu/anaconda3/envs/vscode-jaseci/bin/python",
+	"[python]": {
+		"editor.defaultFormatter": "ms-python.black-formatter"
+	},
+	"python.formatting.provider": "none"
+}

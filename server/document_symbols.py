@@ -1,9 +1,9 @@
 import time
 from pygls.server import LanguageServer
 from jaseci.jac.ir.ast_builder import JacAstBuilder
-from server.builder import JacAstBuilderSLL
+from builder import JacAstBuilderSLL
 
-from server.passes import ArchitypePass
+from passes import ArchitypePass
 from lsprotocol.types import (
     SymbolKind,
     SymbolInformation,
@@ -14,7 +14,7 @@ from lsprotocol.types import (
 )
 from typing import List, Tuple, TypedDict
 
-from server.architypes_utils import get_architype_class
+from architypes_utils import get_architype_class
 
 
 class ArchitypeInfo(TypedDict):
