@@ -60,13 +60,38 @@
                     "default": "You can override this message."
                 }
             }
-        }
+        },
+        "languages": [
+            {
+                "id": "jac",
+                "aliases": [
+                    "Jaseci Programming Language",
+                    "jac"
+                ],
+                "extensions": [
+                    ".jac"
+                ],
+                "configuration": "./language-configuration.json",
+                "icon": {
+                    "light": "./public/file-icon.svg",
+                    "dark": "./public/file-icon.svg"
+                }
+            }
+        ],
+        "grammars": [
+            {
+                "language": "jac",
+                "scopeName": "source.jac",
+                "path": "./syntaxes/jac.tmLanguage.json"
+            }
+        ]
     },
     "main": "./client/out/extension",
     "scripts": {
         "vscode:prepublish": "npm run compile",
         "compile": "tsc -b",
-        "watch": "tsc -b -w"
+        "watch": "tsc -b -w",
+        "package": "vsce package"
     },
     "devDependencies": {
         "@types/node": "^16.11.6",
