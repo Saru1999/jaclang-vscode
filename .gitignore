@@ -6,3 +6,4 @@ env
 *.vsix
 .jaseci_logs
 __pycache__
+*.log

@@ -13,3 +13,7 @@ graph extra_graph {
         graph_root = spawn node::extra_node;
     }
 }
+
+walker init {
+    can date.
+}

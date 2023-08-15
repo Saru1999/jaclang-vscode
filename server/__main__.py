@@ -17,7 +17,7 @@
 import argparse
 import logging
 
-from server import jac_server
+from .server import jac_server
 
 logging.basicConfig(filename="pygls.log", level=logging.DEBUG, filemode="w")
 

@@ -9,10 +9,10 @@ from jaseci.jac.ir.ast_builder import (
 )
 
 
-from architypes_utils import get_architype_class
-from passes.semantic_token_pass import SemanticTokenPass
-from completions import completions, action_modules, get_builtin_action
-from passes import ReferencePass
+from .architypes_utils import get_architype_class
+from .passes.semantic_token_pass import SemanticTokenPass
+from .completions import completions, action_modules, get_builtin_action
+from .passes import ReferencePass
 
 # from .utils import debounce
 
@@ -57,10 +57,10 @@ from lsprotocol.types import (
     TextDocumentContentChangeEvent,
 )
 from pygls.server import LanguageServer
-from document_symbols import (
+from .document_symbols import (
     get_document_symbols,
 )
-from utils import (
+from .utils import (
     deconstruct_error_message,
     get_ast_from_path,
     update_ast_head,
