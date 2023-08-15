@@ -2,5 +2,8 @@ out
 node_modules
 client/server
 .vscode-test
-.vscode/settings.json
 env
+*.vsix
+.jaseci_logs
+__pycache__
+*.log

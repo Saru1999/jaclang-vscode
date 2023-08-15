@@ -1,1 +1,3 @@
 INFO:pygls.server:Starting TCP server on 127.0.0.1:2087
+INFO:pygls.server:Shutting down the server
+INFO:pygls.server:Closing the event loop.
