@@ -1,26 +1,12 @@
-############################################################################
-# Copyright(c) Open Law Library. All rights reserved.                      #
-# See ThirdPartyNotices.txt in the project root for additional notices.    #
-#                                                                          #
-# Licensed under the Apache License, Version 2.0 (the "License")           #
-# you may not use this file except in compliance with the License.         #
-# You may obtain a copy of the License at                                  #
-#                                                                          #
-#     http: // www.apache.org/licenses/LICENSE-2.0                         #
-#                                                                          #
-# Unless required by applicable law or agreed to in writing, software      #
-# distributed under the License is distributed on an "AS IS" BASIS,        #
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. #
-# See the License for the specific language governing permissions and      #
-# limitations under the License.                                           #
-############################################################################
 import asyncio
-import json
 import re
 import time
 import uuid
-from json import JSONDecodeError
 from typing import Optional
+
+from jaclang.jac.lexer import JacLexer
+from jaclang.jac.parser import JacParser
+from jaclang.jac.transform import TransformError
 
 from lsprotocol.types import (
     TEXT_DOCUMENT_COMPLETION,
@@ -36,6 +22,7 @@ from lsprotocol.types import (
     CompletionParams,
     ConfigurationItem,
     Diagnostic,
+    DiagnosticSeverity,
     DidChangeTextDocumentParams,
     DidCloseTextDocumentParams,
     DidOpenTextDocumentParams,
@@ -60,7 +47,7 @@ COUNT_DOWN_START_IN_SECONDS = 10
 COUNT_DOWN_SLEEP_IN_SECONDS = 1
 
 
-class JsonLanguageServer(LanguageServer):
+class JaclangLanguageServer(LanguageServer):
     CMD_COUNT_DOWN_BLOCKING = "countDownBlocking"
     CMD_COUNT_DOWN_NON_BLOCKING = "countDownNonBlocking"
     CMD_PROGRESS = "progress"
@@ -70,52 +57,65 @@ class JsonLanguageServer(LanguageServer):
     CMD_SHOW_CONFIGURATION_THREAD = "showConfigurationThread"
     CMD_UNREGISTER_COMPLETIONS = "unregisterCompletions"
 
-    CONFIGURATION_SECTION = "jsonServer"
+    CONFIGURATION_SECTION = "jaclangServer"
 
     def __init__(self, *args):
         super().__init__(*args)
 
 
-json_server = JsonLanguageServer("pygls-json-example", "v0.1")
+jaclang_server = JaclangLanguageServer("pygls-jaclang", "v0.0.1-alpha")
 
 
 def _validate(ls, params):
-    ls.show_message_log("Validating json...")
+    ls.show_message_log("Validating jac file...")
 
     text_doc = ls.workspace.get_document(params.text_document.uri)
-
     source = text_doc.source
-    diagnostics = _validate_json(source) if source else []
-
+    diagnostics = _validate_jac(source) if source else []
     ls.publish_diagnostics(text_doc.uri, diagnostics)
 
 
-def _validate_json(source):
-    """Validates json file."""
+def _validate_jac(source):
+    """validate jac file"""
     diagnostics = []
-
     try:
-        json.loads(source)
-    except JSONDecodeError as err:
-        msg = err.msg
-        col = err.colno
-        line = err.lineno
-
-        d = Diagnostic(
-            range=Range(
-                start=Position(line=line - 1, character=col - 1),
-                end=Position(line=line - 1, character=col),
-            ),
-            message=msg,
-            source=type(json_server).__name__,
-        )
-
-        diagnostics.append(d)
-
+        lex = JacLexer(mod_path="", input_ir=source).ir
+        JacParser(mod_path="", input_ir=lex)
+    except TransformError as e:
+        if e.errors:
+            for err in e.errors:
+                line = int(re.findall(r"Line (\d+)", err)[0].replace("Line ", ""))
+                msg = " ".join(err.split(",")[1:])
+                diagnostics.append(
+                    Diagnostic(
+                        range=Range(
+                            start=Position(line=line - 1, character=0),
+                            end=Position(line=line - 1, character=100),
+                        ),
+                        message=msg,
+                        severity=DiagnosticSeverity.Error,
+                        source=type(jaclang_server).__name__,
+                    )
+                )
+        if e.warnings:
+            for err in e.warnings:
+                line = int(re.findall(r"Line (\d+)", err)[0].replace("Line ", ""))
+                msg = " ".join(err.split(",")[1:])
+                diagnostics.append(
+                    Diagnostic(
+                        range=Range(
+                            start=Position(line=line - 1, character=0),
+                            end=Position(line=line - 1, character=0),
+                        ),
+                        message=msg,
+                        severity=DiagnosticSeverity.Warning,
+                        source=type(jaclang_server).__name__,
+                    )
+                )
     return diagnostics
 
 
-@json_server.feature(
+@jaclang_server.feature(
     TEXT_DOCUMENT_COMPLETION, CompletionOptions(trigger_characters=[","])
 )
 def completions(params: Optional[CompletionParams] = None) -> CompletionList:
@@ -132,7 +132,7 @@ def completions(params: Optional[CompletionParams] = None) -> CompletionList:
     )
 
 
-@json_server.command(JsonLanguageServer.CMD_COUNT_DOWN_BLOCKING)
+@jaclang_server.command(JaclangLanguageServer.CMD_COUNT_DOWN_BLOCKING)
 def count_down_10_seconds_blocking(ls, *args):
     """Starts counting down and showing message synchronously.
     It will `block` the main thread, which can be tested by trying to show
@@ -143,7 +143,7 @@ def count_down_10_seconds_blocking(ls, *args):
         time.sleep(COUNT_DOWN_SLEEP_IN_SECONDS)
 
 
-@json_server.command(JsonLanguageServer.CMD_COUNT_DOWN_NON_BLOCKING)
+@jaclang_server.command(JaclangLanguageServer.CMD_COUNT_DOWN_NON_BLOCKING)
 async def count_down_10_seconds_non_blocking(ls, *args):
     """Starts counting down and showing message asynchronously.
     It won't `block` the main thread, which can be tested by trying to show
@@ -154,30 +154,31 @@ async def count_down_10_seconds_non_blocking(ls, *args):
         await asyncio.sleep(COUNT_DOWN_SLEEP_IN_SECONDS)
 
 
-@json_server.feature(TEXT_DOCUMENT_DID_CHANGE)
+@jaclang_server.feature(TEXT_DOCUMENT_DID_CHANGE)
 def did_change(ls, params: DidChangeTextDocumentParams):
     """Text document did change notification."""
+    ls.show_message("Text Document Did Change")
     _validate(ls, params)
 
 
-@json_server.feature(TEXT_DOCUMENT_DID_CLOSE)
-def did_close(server: JsonLanguageServer, params: DidCloseTextDocumentParams):
+@jaclang_server.feature(TEXT_DOCUMENT_DID_CLOSE)
+def did_close(server: JaclangLanguageServer, params: DidCloseTextDocumentParams):
     """Text document did close notification."""
     server.show_message("Text Document Did Close")
 
 
-@json_server.feature(TEXT_DOCUMENT_DID_OPEN)
+@jaclang_server.feature(TEXT_DOCUMENT_DID_OPEN)
 async def did_open(ls, params: DidOpenTextDocumentParams):
     """Text document did open notification."""
     ls.show_message("Text Document Did Open")
     _validate(ls, params)
 
 
-@json_server.feature(
+@jaclang_server.feature(
     TEXT_DOCUMENT_SEMANTIC_TOKENS_FULL,
     SemanticTokensLegend(token_types=["operator"], token_modifiers=[]),
 )
-def semantic_tokens(ls: JsonLanguageServer, params: SemanticTokensParams):
+def semantic_tokens(ls: JaclangLanguageServer, params: SemanticTokensParams):
     """See https://microsoft.github.io/language-server-protocol/specification#textDocument_semanticTokens
     for details on how semantic tokens are encoded."""
 
@@ -204,8 +205,8 @@ def semantic_tokens(ls: JsonLanguageServer, params: SemanticTokensParams):
     return SemanticTokens(data=data)
 
 
-@json_server.command(JsonLanguageServer.CMD_PROGRESS)
-async def progress(ls: JsonLanguageServer, *args):
+@jaclang_server.command(JaclangLanguageServer.CMD_PROGRESS)
+async def progress(ls: JaclangLanguageServer, *args):
     """Create and start the progress on the client."""
     token = str(uuid.uuid4())
     # Create
@@ -229,8 +230,8 @@ async def progress(ls: JsonLanguageServer, *args):
     ls.progress.end(token, WorkDoneProgressEnd(message="Finished"))
 
 
-@json_server.command(JsonLanguageServer.CMD_REGISTER_COMPLETIONS)
-async def register_completions(ls: JsonLanguageServer, *args):
+@jaclang_server.command(JaclangLanguageServer.CMD_REGISTER_COMPLETIONS)
+async def register_completions(ls: JaclangLanguageServer, *args):
     """Register completions method on the client."""
     params = RegistrationParams(
         registrations=[
@@ -250,15 +251,16 @@ async def register_completions(ls: JsonLanguageServer, *args):
         )
 
 
-@json_server.command(JsonLanguageServer.CMD_SHOW_CONFIGURATION_ASYNC)
-async def show_configuration_async(ls: JsonLanguageServer, *args):
+@jaclang_server.command(JaclangLanguageServer.CMD_SHOW_CONFIGURATION_ASYNC)
+async def show_configuration_async(ls: JaclangLanguageServer, *args):
     """Gets exampleConfiguration from the client settings using coroutines."""
     try:
         config = await ls.get_configuration_async(
             WorkspaceConfigurationParams(
                 items=[
                     ConfigurationItem(
-                        scope_uri="", section=JsonLanguageServer.CONFIGURATION_SECTION
+                        scope_uri="",
+                        section=JaclangLanguageServer.CONFIGURATION_SECTION,
                     )
                 ]
             )
@@ -272,8 +274,8 @@ async def show_configuration_async(ls: JsonLanguageServer, *args):
         ls.show_message_log(f"Error ocurred: {e}")
 
 
-@json_server.command(JsonLanguageServer.CMD_SHOW_CONFIGURATION_CALLBACK)
-def show_configuration_callback(ls: JsonLanguageServer, *args):
+@jaclang_server.command(JaclangLanguageServer.CMD_SHOW_CONFIGURATION_CALLBACK)
+def show_configuration_callback(ls: JaclangLanguageServer, *args):
     """Gets exampleConfiguration from the client settings using callback."""
 
     def _config_callback(config):
@@ -289,7 +291,7 @@ def show_configuration_callback(ls: JsonLanguageServer, *args):
         WorkspaceConfigurationParams(
             items=[
                 ConfigurationItem(
-                    scope_uri="", section=JsonLanguageServer.CONFIGURATION_SECTION
+                    scope_uri="", section=JaclangLanguageServer.CONFIGURATION_SECTION
                 )
             ]
         ),
@@ -297,16 +299,17 @@ def show_configuration_callback(ls: JsonLanguageServer, *args):
     )
 
 
-@json_server.thread()
-@json_server.command(JsonLanguageServer.CMD_SHOW_CONFIGURATION_THREAD)
-def show_configuration_thread(ls: JsonLanguageServer, *args):
+@jaclang_server.thread()
+@jaclang_server.command(JaclangLanguageServer.CMD_SHOW_CONFIGURATION_THREAD)
+def show_configuration_thread(ls: JaclangLanguageServer, *args):
     """Gets exampleConfiguration from the client settings using thread pool."""
     try:
         config = ls.get_configuration(
             WorkspaceConfigurationParams(
                 items=[
                     ConfigurationItem(
-                        scope_uri="", section=JsonLanguageServer.CONFIGURATION_SECTION
+                        scope_uri="",
+                        section=JaclangLanguageServer.CONFIGURATION_SECTION,
                     )
                 ]
             )
@@ -320,8 +323,8 @@ def show_configuration_thread(ls: JsonLanguageServer, *args):
         ls.show_message_log(f"Error ocurred: {e}")
 
 
-@json_server.command(JsonLanguageServer.CMD_UNREGISTER_COMPLETIONS)
-async def unregister_completions(ls: JsonLanguageServer, *args):
+@jaclang_server.command(JaclangLanguageServer.CMD_UNREGISTER_COMPLETIONS)
+async def unregister_completions(ls: JaclangLanguageServer, *args):
     """Unregister completions method on the client."""
     params = UnregistrationParams(
         unregisterations=[
