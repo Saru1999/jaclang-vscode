@@ -1,19 +1,21 @@
 {
-    "name": "json-extension",
-    "description": "Simple json extension example",
-    "author": "Open Law Library",
-    "repository": "https://github.com/openlawlibrary/pygls",
+    "name": "jaseci-extension",
+    "displayName": "Jaseci 2.0",
+    "icon": "public/icon.png",
+    "description": "Language Server for Jaseci Programming Language",
+    "author": "Chandra Irugalbandara",
+    "repository": "https://github.com/chandralegend/vscode-jaseci",
     "license": "Apache-2.0",
-    "version": "0.11.3",
-    "publisher": "openlawlibrary",
+    "version": "0.0.2",
+    "publisher": "chandralegend",
     "engines": {
         "vscode": "^1.62.0"
     },
     "categories": [
-        "Other"
+        "Programming Languages"
     ],
     "activationEvents": [
-        "onLanguage:json"
+        "onLanguage:jac"
     ],
     "contributes": {
         "commands": [

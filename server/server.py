@@ -4,9 +4,8 @@ import time
 import uuid
 from typing import Optional
 
-from jaclang.jac.lexer import JacLexer
-from jaclang.jac.parser import JacParser
-from jaclang.jac.transform import TransformError
+from .utils.validation import _validate
+from .utils.completion import _get_completion_items
 
 from lsprotocol.types import (
     TEXT_DOCUMENT_COMPLETION,
@@ -21,14 +20,10 @@ from lsprotocol.types import (
     CompletionOptions,
     CompletionParams,
     ConfigurationItem,
-    Diagnostic,
-    DiagnosticSeverity,
     DidChangeTextDocumentParams,
     DidCloseTextDocumentParams,
     DidOpenTextDocumentParams,
     MessageType,
-    Position,
-    Range,
     Registration,
     RegistrationParams,
     SemanticTokens,
@@ -66,70 +61,33 @@ class JaclangLanguageServer(LanguageServer):
 jaclang_server = JaclangLanguageServer("pygls-jaclang", "v0.0.1-alpha")
 
 
-def _validate(ls, params):
-    ls.show_message_log("Validating jac file...")
-
-    text_doc = ls.workspace.get_document(params.text_document.uri)
-    source = text_doc.source
-    diagnostics = _validate_jac(source) if source else []
-    ls.publish_diagnostics(text_doc.uri, diagnostics)
+@jaclang_server.feature(TEXT_DOCUMENT_DID_CHANGE)
+def did_change(ls, params: DidChangeTextDocumentParams):
+    """Stuff to happen on text document did change"""
+    ls.show_message("Text Document Did Change")
+    _validate(ls, params)
 
 
-def _validate_jac(source):
-    """validate jac file"""
-    diagnostics = []
-    try:
-        lex = JacLexer(mod_path="", input_ir=source).ir
-        JacParser(mod_path="", input_ir=lex)
-    except TransformError as e:
-        if e.errors:
-            for err in e.errors:
-                line = int(re.findall(r"Line (\d+)", err)[0].replace("Line ", ""))
-                msg = " ".join(err.split(",")[1:])
-                diagnostics.append(
-                    Diagnostic(
-                        range=Range(
-                            start=Position(line=line - 1, character=0),
-                            end=Position(line=line - 1, character=100),
-                        ),
-                        message=msg,
-                        severity=DiagnosticSeverity.Error,
-                        source=type(jaclang_server).__name__,
-                    )
-                )
-        if e.warnings:
-            for err in e.warnings:
-                line = int(re.findall(r"Line (\d+)", err)[0].replace("Line ", ""))
-                msg = " ".join(err.split(",")[1:])
-                diagnostics.append(
-                    Diagnostic(
-                        range=Range(
-                            start=Position(line=line - 1, character=0),
-                            end=Position(line=line - 1, character=0),
-                        ),
-                        message=msg,
-                        severity=DiagnosticSeverity.Warning,
-                        source=type(jaclang_server).__name__,
-                    )
-                )
-    return diagnostics
+@jaclang_server.feature(TEXT_DOCUMENT_DID_CLOSE)
+def did_close(server: JaclangLanguageServer, params: DidCloseTextDocumentParams):
+    """Stuff to happen on text document did close"""
+    server.show_message("Text Document Did Close")
+
+
+@jaclang_server.feature(TEXT_DOCUMENT_DID_OPEN)
+async def did_open(ls, params: DidOpenTextDocumentParams):
+    """Stuff to happen on text document did open"""
+    ls.show_message("Text Document Did Open")
+    _validate(ls, params)
 
 
 @jaclang_server.feature(
-    TEXT_DOCUMENT_COMPLETION, CompletionOptions(trigger_characters=[","])
+    TEXT_DOCUMENT_COMPLETION, CompletionOptions(trigger_characters=[":", "::", "."])
 )
 def completions(params: Optional[CompletionParams] = None) -> CompletionList:
     """Returns completion items."""
-    return CompletionList(
-        is_incomplete=False,
-        items=[
-            CompletionItem(label='"'),
-            CompletionItem(label="["),
-            CompletionItem(label="]"),
-            CompletionItem(label="{"),
-            CompletionItem(label="}"),
-        ],
-    )
+    completion_items = _get_completion_items(params)
+    return CompletionList(is_incomplete=False, items=completion_items)
 
 
 @jaclang_server.command(JaclangLanguageServer.CMD_COUNT_DOWN_BLOCKING)
@@ -152,26 +110,6 @@ async def count_down_10_seconds_non_blocking(ls, *args):
     for i in range(COUNT_DOWN_START_IN_SECONDS):
         ls.show_message(f"Counting down... {COUNT_DOWN_START_IN_SECONDS - i}")
         await asyncio.sleep(COUNT_DOWN_SLEEP_IN_SECONDS)
-
-
-@jaclang_server.feature(TEXT_DOCUMENT_DID_CHANGE)
-def did_change(ls, params: DidChangeTextDocumentParams):
-    """Text document did change notification."""
-    ls.show_message("Text Document Did Change")
-    _validate(ls, params)
-
-
-@jaclang_server.feature(TEXT_DOCUMENT_DID_CLOSE)
-def did_close(server: JaclangLanguageServer, params: DidCloseTextDocumentParams):
-    """Text document did close notification."""
-    server.show_message("Text Document Did Close")
-
-
-@jaclang_server.feature(TEXT_DOCUMENT_DID_OPEN)
-async def did_open(ls, params: DidOpenTextDocumentParams):
-    """Text document did open notification."""
-    ls.show_message("Text Document Did Open")
-    _validate(ls, params)
 
 
 @jaclang_server.feature(
