@@ -17,13 +17,13 @@
 import argparse
 import logging
 
-from .server import jac_server
+from .server import jaclang_server
 
 logging.basicConfig(filename="pygls.log", level=logging.DEBUG, filemode="w")
 
 
 def add_arguments(parser):
-    parser.description = "Jac Language Server"
+    parser.description = "simple json server example"
 
     parser.add_argument("--tcp", action="store_true", help="Use TCP server")
     parser.add_argument("--ws", action="store_true", help="Use WebSocket server")
@@ -37,11 +37,11 @@ def main():
     args = parser.parse_args()
 
     if args.tcp:
-        jac_server.start_tcp(args.host, args.port)
+        jaclang_server.start_tcp(args.host, args.port)
     elif args.ws:
-        jac_server.start_ws(args.host, args.port)
+        jaclang_server.start_ws(args.host, args.port)
     else:
-        jac_server.start_io()
+        jaclang_server.start_io()
 
 
 if __name__ == "__main__":
