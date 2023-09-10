@@ -13,7 +13,6 @@ from lsprotocol.types import (
     TEXT_DOCUMENT_DID_CLOSE,
     TEXT_DOCUMENT_DID_OPEN,
     TEXT_DOCUMENT_SEMANTIC_TOKENS_FULL,
-
 )
 from lsprotocol.types import (
     CompletionList,

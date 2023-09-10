@@ -35,7 +35,9 @@ def _validate_jac(doc_path: str, source: str) -> list:
                         end=Position(line=line - 1, character=0),
                     ),
                     message=msg,
-                    severity=DiagnosticSeverity.Error if err in prse.errors_had else DiagnosticSeverity.Warning,
+                    severity=DiagnosticSeverity.Error
+                    if err in prse.errors_had
+                    else DiagnosticSeverity.Warning,
                 )
             )
 

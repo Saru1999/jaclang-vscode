@@ -1,2 +1,3 @@
 pygls
 pytest
+pre-commit

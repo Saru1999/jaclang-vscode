@@ -43,7 +43,7 @@ keywords = {
     },
 }
 # python libraries available to import
-py_libraries = [name for _, name, _ in pkgutil.iter_modules() if '_' not in name]
+py_libraries = [name for _, name, _ in pkgutil.iter_modules() if "_" not in name]
 
 
 # default completion items
@@ -96,7 +96,7 @@ def _get_completion_items(
         ]
 
     ## python imports
-    if before_cursor in ["import:py from ","import:py "]:
+    if before_cursor in ["import:py from ", "import:py "]:
         return [
             CompletionItem(label=py_lib, kind=CompletionItemKind.Module)
             for py_lib in py_libraries
