@@ -13,9 +13,9 @@ from lsprotocol.types import (
     TEXT_DOCUMENT_DID_CLOSE,
     TEXT_DOCUMENT_DID_OPEN,
     TEXT_DOCUMENT_SEMANTIC_TOKENS_FULL,
+
 )
 from lsprotocol.types import (
-    CompletionItem,
     CompletionList,
     CompletionOptions,
     CompletionParams,
@@ -86,7 +86,7 @@ async def did_open(ls, params: DidOpenTextDocumentParams):
 )
 def completions(params: Optional[CompletionParams] = None) -> CompletionList:
     """Returns completion items."""
-    completion_items = _get_completion_items(params)
+    completion_items = _get_completion_items(jaclang_server, params)
     return CompletionList(is_incomplete=False, items=completion_items)
 
 
