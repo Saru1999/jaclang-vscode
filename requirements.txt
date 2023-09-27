@@ -4,6 +4,8 @@
 #
 #    pip-compile --generate-hashes ./requirements.in
 #
+--extra-index-url https://packagecloud.io/github/git-lfs/pypi/simple
+
 attrs==23.1.0 \
     --hash=sha256:1f28b4522cdc2fb4256ac1a020c78acf9cba2c6b461ccd2c126f3aa8e8335d04 \
     --hash=sha256:6279836d581513a26f1bf235f9acd333bc9115683f14f7e8fae46c98fc50e015
@@ -22,9 +24,9 @@ importlib-metadata==6.8.0 \
     --hash=sha256:3ebb78df84a805d7698245025b975d9d67053cd94c79245ba4b3eb694abe68bb \
     --hash=sha256:dbace7892d8c0c4ac1ad096662232f831d4e64f4c4545bd53016a3e9d4654743
     # via typeguard
-jaclang==0.0.6 \
-    --hash=sha256:2f5c06efafb2b529ce25bfdea33549ca7c3373a2dbc40e7f59e3c503c1a0e718 \
-    --hash=sha256:895963d33eef07ad8274757cc2ff0aa4b708bbf358ae8a1173c513dba4b24441
+jaclang==0.0.8 \
+    --hash=sha256:b822783b524b19c2ae1ec9728e1f55e3773b732a6e7ccb0d1d136e2768d9d0e1 \
+    --hash=sha256:d40111bf7484d0b99d4d25bd9e74d72c632f3e124093fb76e623de58a39a60c5
     # via -r ./requirements.in
 lsprotocol==2023.0.0b1 \
     --hash=sha256:ade2cd0fa0ede7965698cb59cd05d3adbd19178fd73e83f72ef57a032fbb9d62 \
