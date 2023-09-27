@@ -1,0 +1,17 @@
+{
+    "extension.description": "Jaseci is a graph based programming language for AI and ML. This extension provides syntax highlighting , completion, formatting, and linting for Jaseci.",
+    "command.restartServer": "Restart Server",
+    "settings.severity.description": "Mapping from severity of `jac` message type to severity shown in problem window.",
+    "settings.importStrategy.description": "Defines where `jaclang` is imported from.",
+    "settings.importStrategy.useBundled.description": "Always use the bundled version of `jaclang`.",
+    "settings.importStrategy.fromEnvironment.description": "Use `jaclang` from environment, fallback to bundled version only if `jaclang` not available in the environment.",
+    "settings.interpreter.description": "When set to a path to Python executable, extension will use that to launch the server and any subprocess.",
+    "settings.reportingScope.description": "Defines the scope of the problems reported by the extension.",
+    "settings.reportingScope.file.description": "Problems are reported for the files open in the editor only.",
+    "settings.reportingScope.workspace.description": "Problems are reported for files in the workspace.",
+    "settings.showNotifications.description": "Controls when notifications are shown by this extension.",
+    "settings.showNotifications.off.description": "All notifications are turned off, any errors or warning are still available in the logs.",
+    "settings.showNotifications.onError.description": "Notifications are shown only in the case of an error.",
+    "settings.showNotifications.onWarning.description": "Notifications are shown for errors and warnings.",
+    "settings.showNotifications.always.description": "Notifications are show for anything that the server chooses to show."
+}

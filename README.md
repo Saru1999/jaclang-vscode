@@ -1,51 +1,44 @@
-# Jaseci VSCode Extension
-[![Language Server Tests](https://github.com/Jaseci-Labs/vscode/actions/workflows/server.yml/badge.svg)](https://github.com/Jaseci-Labs/vscode/actions/workflows/server.yml)
-## Introduction
+<!-- Icon.png in 100px * 100px in HTML -->
 
-## Development
 
-This section is for developers who want to contribute to the project. If you are just looking to use the extension, please refer to the following guide.
+# <img src="icon.png" alt="Jaseci Logo" width="50" height="50"> Jaseci Extension for VScode <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Visual_Studio_Code_1.35_icon.svg/2048px-Visual_Studio_Code_1.35_icon.svg.png" alt="Jaseci Logo" width="50" height="50">
 
-### Prerequisites
+## Usage
 
+## Settings
+
+| Settings                            | Default                                       | Description                                                                                                                                                                                                                                                                                                                                      |
+| ----------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| jaseci.severity          | `{ "error": "Error", "note": "Information" }` | Controls mapping of severity from `jaseci` to VS Code severity when displaying in the problems window. You can override specific `jac` error codes `{ "error": "Error", "note": "Information", "name-defined": "Warning" }`                                                                                                                       |
+| jaseci.interpreter       | `[]`                                          | Path to a Python interpreter to use to run the Jaseci language server. When set to `[]`, the interpreter for the workspace is obtained from `ms-python.python` extension. If set to some path, that path takes precedence, and the Python extension is not queried for the interpreter.                                                                   |
+| jaseci.importStrategy    | `useBundled`                                  | Setting to choose where to load `jaclang` from. `useBundled` picks mypy bundled with the extension. `fromEnvironment` uses `jaclang` available in the environment.                                                                                                                                                                                     |
+| jaseci.showNotifications | `off`                                         | Setting to control when a notification is shown.                                                                                                                                                                                                                                                                                                 |
+| jaseci.reportingScope    | `file`                                        | (experimental) Setting to control if problems are reported for files open in the editor (`file`) or for the entire workspace (`workspace`).                                                                                                                                                                                                      |
+
+## Commands
+
+| Command              | Description                       |
+| -------------------- | --------------------------------- |
+| Jaseci: Restart Server | Force re-start the language server. |
+
+## Logging
+
+From the command palette (View > Command Palette ...), run the `Developer: Set Log Level...` command. From the quick pick menu, select `Jaseci Language Server` extension from the `Extension logs` group. Then select the log level you want to set.
+
+## Contributing
+### Pre-requisites
 - [Node.js](https://nodejs.org/en/)
-- [npm](https://www.npmjs.com/)
+- [VS Code](https://code.visualstudio.com/)
+- [Python](https://www.python.org/)(3.8)
+  - [Conda](https://docs.conda.io/en/latest/) (optional) `conda create -n vscode-jaseci python=3.8 -y`
 
-### Installation
-
-1. Clone the repo
-
-```sh
-git clone https://github.com/Jaseci-Labs/vscode.git
+### Setup
+Install Nox
+```bash
+pip install nox
 ```
-
-2. Install NPM packages
-
-```sh
-npm install
+Install Dependencies (both Python and Node.js)
+```bash
+nox --session setup
 ```
-
-3. Install Server Dependencies
-
-```sh
-pip install -r server/requirements.txt
-# Installing Jaclang (Need to clone and install manually for now)
-git clone https://github.com/Jaseci-Labs/jaclang.git
-pip install -e jaclang
-```
-
-### Running the extension in Debugging mode
-
-1. Build the extension (In Vscode)
-Press `Ctrl + Shift + B (Windows/Linux)` or  `Cmd + Shift + B (MacOS)`
-
-2. Run the extension in Debug mode
-Press `Ctrl/Cmd + Shift + D`, select `Server + Client` from the dropdown menu and press 'Play' icon. This will open a new VSCode window with the extension loaded. Thats where you can test the extension.
-
-> Note: If you make a change in the server code, you need to restart the debug session (both server and client) to see the changes.
-
-### References
-
-- [VSCode Extension API](https://code.visualstudio.com/api)
-- [VSCode Extension API - Language Server](https://code.visualstudio.com/api/language-extensions/language-server-extension-guide)
-- [PyGLS - Python Language Server](https://pygls.readthedocs.io/en/latest/)
+You are ready to run the extension in a development environment.

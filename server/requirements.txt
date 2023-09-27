@@ -1,3 +1,0 @@
-pygls
-pytest
-pre-commit

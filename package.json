@@ -1,65 +1,148 @@
 {
     "name": "jaseci-extension",
-    "displayName": "Jaseci 2.0",
-    "icon": "public/icon.png",
-    "description": "Language Server for Jaseci Programming Language",
-    "author": "Chandra Irugalbandara",
-    "repository": "https://github.com/chandralegend/vscode-jaseci",
-    "license": "Apache-2.0",
-    "version": "0.0.2",
-    "publisher": "chandralegend",
+    "displayName": "Jaseci",
+    "description": "%extension.description%",
+    "version": "2023.9.0",
+    "preview": true,
+    "serverInfo": {
+        "name": "Jaseci",
+        "module": "jaseci"
+    },
+    "publisher": "jaseci-labs",
+    "license": "MIT",
+    "icon": "icon.png",
+    "homepage": "https://www.jac-lang.org/",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/jaseci-labs/vscode-jaseci.git"
+    },
+    "bugs": {
+        "url": "https://github.com/jaseci-labs/vscode-jaseci/issues"
+    },
+    "galleryBanner": {
+        "color": "#1e415e",
+        "theme": "dark"
+    },
+    "keywords": [
+        "jaseci",
+        "jaclang",
+        "jac"
+    ],
     "engines": {
-        "vscode": "^1.62.0"
+        "vscode": "^1.75.0"
     },
     "categories": [
-        "Programming Languages"
+        "Programming Languages",
+        "Linters",
+        "Formatters",
+        "Snippets",
+        "Data Science",
+        "Machine Learning"
     ],
+    "extensionDependencies": [
+        "ms-python.python"
+    ],
+    "capabilities": {
+        "virtualWorkspaces": {
+            "supported": false,
+            "description": "Virtual Workspaces are not supported with jaseci."
+        }
+    },
     "activationEvents": [
         "onLanguage:jac"
     ],
+    "main": "./dist/extension.js",
+    "scripts": {
+        "vscode:prepublish": "npm run package",
+        "compile": "webpack",
+        "watch": "webpack --watch",
+        "package": "webpack --mode production --devtool source-map --config ./webpack.config.js",
+        "compile-tests": "tsc -p . --outDir out",
+        "watch-tests": "tsc -p . -w --outDir out",
+        "pretest": "npm run compile-tests && npm run compile",
+        "lint": "eslint src --ext ts",
+        "format-check": "prettier --check 'src/**/*.ts' 'build/**/*.yml' '.github/**/*.yml'",
+        "tests": "node ./out/test/ts_tests/runTest.js",
+        "vsce-package": "vsce package -o jaseci-extension.vsix"
+    },
     "contributes": {
-        "commands": [
-            {
-                "command": "countDownBlocking",
-                "title": "Count down 10 seconds [Blocking]"
-            },
-            {
-                "command": "countDownNonBlocking",
-                "title": "Count down 10 seconds [Non Blocking]"
-            },
-            {
-                "command": "progress",
-                "title": "Start the progress"
-            },
-            {
-                "command": "registerCompletions",
-                "title": "Register completions"
-            },
-            {
-                "command": "showConfigurationAsync",
-                "title": "Show Json Example Configuration [Async]"
-            },
-            {
-                "command": "showConfigurationCallback",
-                "title": "Show Json Example Configuration [Callback]"
-            },
-            {
-                "command": "showConfigurationThread",
-                "title": "Show Json Example Configuration [Thread]"
-            },
-            {
-                "command": "unregisterCompletions",
-                "title": "Unregister completions"
-            }
-        ],
         "configuration": {
-            "type": "object",
-            "title": "Json Server Configuration",
             "properties": {
-                "jsonServer.exampleConfiguration": {
+                "jaseci.importStrategy": {
+                    "default": "useBundled",
+                    "markdownDescription": "%settings.importStrategy.description%",
+                    "enum": [
+                        "useBundled",
+                        "fromEnvironment"
+                    ],
+                    "markdownEnumDescriptions": [
+                        "%settings.importStrategy.useBundled.description%",
+                        "%settings.importStrategy.fromEnvironment.description%"
+                    ],
+                    "scope": "window",
+                    "type": "string"
+                },
+                "jaseci.interpreter": {
+                    "default": [],
+                    "markdownDescription": "%settings.interpreter.description%",
+                    "scope": "resource",
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                },
+                "jaseci.reportingScope": {
+                    "default": "file",
+                    "markdownDescription": "%settings.reportingScope.description%",
+                    "enum": [
+                        "file",
+                        "workspace"
+                    ],
+                    "markdownEnumDescriptions": [
+                        "%settings.reportingScope.file.description%",
+                        "%settings.reportingScope.workspace.description%"
+                    ],
                     "scope": "resource",
                     "type": "string",
-                    "default": "You can override this message."
+                    "tags": [
+                        "experimental"
+                    ]
+                },
+                "jaseci.severity": {
+                    "default": {
+                        "error": "Error",
+                        "note": "Information"
+                    },
+                    "additionalProperties": {
+                        "type": "string",
+                        "enum": [
+                            "Error",
+                            "Hint",
+                            "Information",
+                            "Warning"
+                        ]
+                    },
+                    "markdownDescription": "%settings.severity.description%",
+                    "scope": "resource",
+                    "type": "object"
+                },
+                "jaseci.showNotifications": {
+                    "default": "off",
+                    "markdownDescription": "%settings.showNotifications.description%",
+                    "enum": [
+                        "off",
+                        "onError",
+                        "onWarning",
+                        "always"
+                    ],
+                    "markdownEnumDescriptions": [
+                        "%settings.showNotifications.off.description%",
+                        "%settings.showNotifications.onError.description%",
+                        "%settings.showNotifications.onWarning.description%",
+                        "%settings.showNotifications.always.description%"
+                    ],
+                    "scope": "machine",
+                    "type": "string"
                 }
             }
         },
@@ -75,8 +158,8 @@
                 ],
                 "configuration": "./language-configuration.json",
                 "icon": {
-                    "light": "./public/file-icon.svg",
-                    "dark": "./public/file-icon.svg"
+                    "light": "file-icon.svg",
+                    "dark": "file-icon.svg"
                 }
             }
         ],
@@ -86,24 +169,42 @@
                 "scopeName": "source.jac",
                 "path": "./syntaxes/jac.tmLanguage.json"
             }
+        ],
+        "commands": [
+            {
+                "title": "%command.restartServer%",
+                "category": "Jaseci",
+                "command": "jaseci.restart"
+            }
         ]
     },
-    "main": "./client/out/extension",
-    "scripts": {
-        "vscode:prepublish": "npm run compile",
-        "compile": "tsc -b",
-        "watch": "tsc -b -w",
-        "package": "vsce package"
+    "dependencies": {
+        "@vscode/python-extension": "^1.0.5",
+        "fs-extra": "^11.1.1",
+        "vscode-languageclient": "^8.1.0"
     },
     "devDependencies": {
-        "@types/node": "^16.11.6",
-        "@types/vscode": "^1.62.0",
-        "@typescript-eslint/eslint-plugin": "^5.3.0",
-        "@typescript-eslint/parser": "^5.3.0",
-        "eslint": "^8.2.0",
-        "typescript": "^4.4.4"
-    },
-    "dependencies": {
-        "vscode-languageclient": "^7.0.0"
+        "@types/chai": "^4.3.6",
+        "@types/fs-extra": "^11.0.2",
+        "@types/glob": "^8.1.0",
+        "@types/mocha": "^10.0.1",
+        "@types/node": "16.x",
+        "@types/sinon": "^10.0.16",
+        "@types/vscode": "^1.74.0",
+        "@typescript-eslint/eslint-plugin": "^6.7.0",
+        "@typescript-eslint/parser": "^6.7.0",
+        "@vscode/test-electron": "^2.3.4",
+        "@vscode/vsce": "^2.21.0",
+        "chai": "^4.3.8",
+        "eslint": "^8.49.0",
+        "glob": "^10.3.4",
+        "mocha": "^10.2.0",
+        "prettier": "^3.0.3",
+        "sinon": "^16.0.0",
+        "ts-loader": "^9.4.4",
+        "typemoq": "^2.1.0",
+        "typescript": "^5.2.2",
+        "webpack": "^5.88.2",
+        "webpack-cli": "^5.1.4"
     }
 }
