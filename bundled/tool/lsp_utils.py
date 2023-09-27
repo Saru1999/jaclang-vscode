@@ -18,8 +18,8 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 # Save the working directory used when loading this module
 SERVER_CWD = os.getcwd()
 CWD_LOCK = threading.Lock()
-ERROR_CODE_BASE_URL = "https://mypy.readthedocs.io/en/latest/_refs.html#code-"
-SEE_HREF_PREFIX = "See https://mypy.readthedocs.io"
+ERROR_CODE_BASE_URL = "INCLUDE ERROR CODE BASE URL HERE"
+SEE_HREF_PREFIX = "See LINK"
 SEE_PREFIX_LEN = len("See ")
 NOTE_CODE = "note"
 LINE_OFFSET = CHAR_OFFSET = 1
@@ -251,7 +251,7 @@ import re
 from lsprotocol.types import Diagnostic, DiagnosticSeverity, Position, Range
 
 
-def _validate(ls, params):
+def validate(ls, params):
     ls.show_message_log("Validating jac file...")
 
     text_doc = ls.workspace.get_document(params.text_document.uri)
@@ -294,7 +294,6 @@ def _validate_jac(doc_path: str, source: str) -> list:
 
 
 from pygls.server import LanguageServer
-from typing import Optional
 from lsprotocol.types import (
     CompletionParams,
     CompletionItem,
@@ -302,7 +301,6 @@ from lsprotocol.types import (
     InsertTextFormat,
 )
 import pkgutil
-import re
 import inspect
 import importlib
 import os
@@ -356,7 +354,7 @@ default_completion_items = [
 ]
 
 
-def _get_completion_items(
+def get_completion_items(
     server: LanguageServer, params: Optional[CompletionParams]
 ) -> list:
     """Returns completion items."""
@@ -370,7 +368,7 @@ def _get_completion_items(
     last_word = before_cursor.split()[-1]
 
     # Import Completions
-    ## jac imports
+    # jac imports
     if last_word == "include:jac":
         # getting all the jac files in the workspace
         file_dir = os.path.dirname(params.text_document.uri.replace("file://", ""))
@@ -388,13 +386,13 @@ def _get_completion_items(
             for jac_import in jac_imports
         ]
 
-    ## python imports
+    # python imports
     if before_cursor in ["import:py from ", "import:py "]:
         return [
             CompletionItem(label=py_lib, kind=CompletionItemKind.Module)
             for py_lib in py_libraries
         ]
-    ### functions and classes in the imported python library
+    # functions and classes in the imported python library
     py_import_match = re.match(r"import:py from (\w+),", before_cursor)
     if py_import_match:
         py_module = py_import_match.group(1)
@@ -417,17 +415,7 @@ def _get_completion_items(
 # **********************************************************
 
 import os
-from typing import List
-
-from pygls.server import LanguageServer
-from lsprotocol.types import (
-    TextDocumentItem,
-    SymbolInformation,
-    SymbolKind,
-    Location,
-    Range,
-    Position,
-)
+from lsprotocol.types import TextDocumentItem, SymbolInformation, SymbolKind, Location
 
 from jaclang.jac.passes import Pass
 from jaclang.jac.passes.blue.ast_build_pass import AstBuildPass

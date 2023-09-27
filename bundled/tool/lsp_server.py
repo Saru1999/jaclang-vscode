@@ -3,16 +3,11 @@
 """Implementation of tool support over LSP."""
 from __future__ import annotations
 
-import copy
 import json
 import os
 import pathlib
-import re
 import sys
-import tempfile
-import traceback
-import uuid
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Optional
 
 
 # **********************************************************
@@ -42,8 +37,6 @@ update_sys_path(
 # **********************************************************
 import lsp_utils as utils
 import lsprotocol.types as lsp
-from packaging.version import Version
-from packaging.version import parse as parse_version
 from pygls import server, uris, workspace
 
 WORKSPACE_SETTINGS = {}
@@ -57,7 +50,7 @@ LSP_SERVER.workspace_filled = False
 LSP_SERVER.dep_table = {}
 
 # **********************************************************
-# Language Server features start here
+# Language Server features
 # **********************************************************
 
 
@@ -65,14 +58,14 @@ LSP_SERVER.dep_table = {}
 def did_change(ls, params: lsp.DidChangeTextDocumentParams):
     """Stuff to happen on text document did change"""
     utils.update_doc_tree(ls, params.text_document.uri)
-    # utils._validate(ls, params)
+    # utils.validate(ls, params)
 
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DID_SAVE)
 def did_save(ls, params: lsp.DidSaveTextDocumentParams):
     """Stuff to happen on text document did save"""
     utils.update_doc_tree(ls, params.text_document.uri)
-    # utils._validate(ls, params)
+    # utils.validate(ls, params)
 
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DID_CLOSE)
@@ -86,13 +79,13 @@ async def did_open(ls, params: lsp.DidOpenTextDocumentParams):
     """Stuff to happen on text document did open"""
     if not ls.workspace_filled:
         utils.fill_workspace(ls)
-    # utils._validate(ls, params)
+    # utils.validate(ls, params)
 
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_COMPLETION)
 def completions(params: Optional[lsp.CompletionParams] = None) -> lsp.CompletionList:
     """Returns completion items."""
-    completion_items = utils._get_completion_items(LSP_SERVER, params)
+    completion_items = utils.get_completion_items(LSP_SERVER, params)
     return lsp.CompletionList(is_incomplete=False, items=completion_items)
 
 
@@ -132,188 +125,6 @@ def definition(ls, params: lsp.DefinitionParams):
     return None
 
 
-def _is_empty_diagnostics(
-    filepath: str, results: Optional[Dict[str, str | None]]
-) -> bool:
-    if results is None:
-        return True
-    for reported_path, diagnostics in results.items():
-        if utils.is_same_path(filepath, reported_path) and diagnostics:
-            return False
-    return True
-
-
-_reported_file_paths = set()
-
-
-# def _linting_helper(document: workspace.Document) -> None:
-#     global _reported_file_paths
-#     try:
-#         extra_args = []
-
-#         # deep copy here to prevent accidentally updating global settings.
-#         settings = copy.deepcopy(_get_settings_by_document(document))
-
-#         version = get_mypy_info(settings).version
-#         if (version.major, version.minor) >= (0, 991) and sys.version_info >= (3, 8):
-#             extra_args += ["--show-error-end"]
-
-#         result = _run_tool_on_document(document, extra_args=extra_args)
-#         if result and result.stdout:
-#             log_to_output(f"{document.uri} :\r\n{result.stdout}")
-#             parse_results = _parse_output_using_regex(
-#                 result.stdout, settings["severity"]
-#             )
-#             reportingScope = settings["reportingScope"]
-#             for file_path, diagnostics in parse_results.items():
-#                 is_file_same_as_document = utils.is_same_path(file_path, document.path)
-#                 # skip output from other documents
-#                 # (mypy will follow imports, so may include errors found in other
-#                 # documents; this is fine/correct, we just need to account for it).
-#                 if reportingScope == "file" and is_file_same_as_document:
-#                     LSP_SERVER.publish_diagnostics(document.uri, diagnostics)
-#                 elif reportingScope == "workspace":
-#                     _reported_file_paths.add(file_path)
-#                     uri = uris.from_fs_path(file_path)
-#                     LSP_SERVER.publish_diagnostics(uri, diagnostics)
-
-#             if reportingScope == "file":
-#                 if _is_empty_diagnostics(document.path, parse_results):
-#                     # Ensure that if nothing is returned for this document, at least
-#                     # an empty diagnostic is returned to clear any old errors out.
-#                     LSP_SERVER.publish_diagnostics(document.uri, [])
-
-#             if reportingScope == "workspace":
-#                 for file_path in _reported_file_paths:
-#                     if file_path not in parse_results:
-#                         uri = uris.from_fs_path(file_path)
-#                         LSP_SERVER.publish_diagnostics(uri, [])
-#         else:
-#             LSP_SERVER.publish_diagnostics(document.uri, [])
-#     except Exception:
-#         LSP_SERVER.show_message_log(
-#             f"Linting failed with error:\r\n{traceback.format_exc()}",
-#             lsp.MessageType.Error,
-#         )
-#     return []
-
-
-# DIAGNOSTIC_RE = re.compile(
-#     r"^(?P<location>(?P<filepath>..[^:]*):(?P<line>\d+):(?P<char>\d+)(?::(?P<end_line>\d+):(?P<end_char>\d+))?): (?P<type>\w+): (?P<message>.*?)(?:  \[(?P<code>[\w-]+)\])?$"
-# )
-
-
-# def _get_group_dict(line: str) -> Optional[Dict[str, str | None]]:
-#     match = DIAGNOSTIC_RE.match(line)
-#     if match:
-#         return match.groupdict()
-
-#     return None
-
-
-# def _parse_output_using_regex(
-#     content: str, severity: Dict[str, str]
-# ) -> Dict[str, List[lsp.Diagnostic]]:
-#     lines: List[str] = content.splitlines()
-#     diagnostics: Dict[str, List[lsp.Diagnostic]] = {}
-
-#     notes = []
-#     see_href = None
-
-#     for i, line in enumerate(lines):
-#         if line.startswith("'") and line.endswith("'"):
-#             line = line[1:-1]
-
-#         data = _get_group_dict(line)
-
-#         if not data:
-#             continue
-
-#         filepath = utils.normalize_path(data["filepath"])
-#         type_ = data["type"]
-#         code = data["code"]
-
-#         if type_ == "note":
-#             if see_href is None and data["message"].startswith(utils.SEE_HREF_PREFIX):
-#                 see_href = data["message"][utils.SEE_PREFIX_LEN :]
-
-#             notes.append(data["message"])
-
-#             if i + 1 < len(lines):
-#                 next_line = lines[i + 1]
-#                 next_data = _get_group_dict(next_line)
-#                 if (
-#                     next_data
-#                     and next_data["type"] == "note"
-#                     and next_data["location"] == data["location"]
-#                 ):
-#                     # the note is not finished yet
-#                     continue
-
-#             message = "\n".join(notes)
-#             href = see_href
-#         else:
-#             message = data["message"]
-#             href = utils.ERROR_CODE_BASE_URL + code if code else None
-
-#         start_line = int(data["line"])
-#         start_char = int(data["char"])
-
-#         end_line = data["end_line"]
-#         end_char = data["end_char"]
-
-#         end_line = int(end_line) if end_line is not None else start_line
-#         end_char = int(end_char) + 1 if end_char is not None else start_char
-
-#         start = lsp.Position(
-#             line=max(start_line - utils.LINE_OFFSET, 0),
-#             character=start_char - utils.CHAR_OFFSET,
-#         )
-
-#         end = lsp.Position(
-#             line=max(end_line - utils.LINE_OFFSET, 0),
-#             character=end_char - utils.CHAR_OFFSET,
-#         )
-
-#         diagnostic = lsp.Diagnostic(
-#             range=lsp.Range(
-#                 start=start,
-#                 end=end,
-#             ),
-#             message=message,
-#             severity=_get_severity(code or "", data["type"], severity),
-#             code=code if code else utils.NOTE_CODE if see_href else None,
-#             code_description=lsp.CodeDescription(href=href) if href else None,
-#             source=TOOL_DISPLAY,
-#         )
-#         if filepath in diagnostics:
-#             diagnostics[filepath].append(diagnostic)
-#         else:
-#             diagnostics[filepath] = [diagnostic]
-
-#         notes = []
-#         see_href = None
-
-#     return diagnostics
-
-
-# def _get_severity(
-#     code: str, code_type: str, severity: Dict[str, str]
-# ) -> lsp.DiagnosticSeverity:
-#     value = severity.get(code, None) or severity.get(code_type, "Error")
-#     try:
-#         return lsp.DiagnosticSeverity[value]
-#     except KeyError:
-#         pass
-
-#     return lsp.DiagnosticSeverity.Information
-
-
-# **********************************************************
-# Jaseci Features end here
-# **********************************************************
-
-
 # **********************************************************
 # Required Language Server Initialization and Exit handlers.
 # **********************************************************
@@ -339,68 +150,6 @@ def initialize(params: lsp.InitializeParams) -> None:
     setting = _get_settings_by_path(pathlib.Path(os.getcwd()))
     for extra in setting.get("extraPaths", []):
         update_sys_path(extra, import_strategy)
-
-    # paths = "\r\n   ".join(sys.path)
-    # log_to_output(f"sys.path used to run Server:\r\n   {paths}")
-
-    # global DMYPY_STATUS_FILE_ROOT
-    # if "DMYPY_STATUS_FILE_ROOT" in os.environ:
-    #     DMYPY_STATUS_FILE_ROOT = (
-    #         pathlib.Path(os.environ["DMYPY_STATUS_FILE_ROOT"]) / ".vscode.dmypy_status"
-    #     )
-    # else:
-    #     DMYPY_STATUS_FILE_ROOT = (
-    #         pathlib.Path(tempfile.gettempdir()) / ".vscode.dmypy_status"
-    #     )
-
-    # if not DMYPY_STATUS_FILE_ROOT.exists():
-    #     DMYPY_STATUS_FILE_ROOT.mkdir(parents=True)
-    #     GIT_IGNORE_FILE = DMYPY_STATUS_FILE_ROOT / ".gitignore"
-    #     if not GIT_IGNORE_FILE.exists():
-    #         GIT_IGNORE_FILE.write_text("*", encoding="utf-8")
-
-    # _log_version_info()
-
-
-# @LSP_SERVER.feature(lsp.EXIT)
-# def on_exit(_params: Optional[Any] = None) -> None:
-#     """Handle clean up on exit."""
-#     for settings in WORKSPACE_SETTINGS.values():
-#         if get_mypy_info(settings).is_daemon:
-#             try:
-#                 _run_dmypy_command([], copy.deepcopy(settings), "kill")
-#             except Exception:
-#                 pass
-
-
-# @LSP_SERVER.feature(lsp.SHUTDOWN)
-# def on_shutdown(_params: Optional[Any] = None) -> None:
-#     """Handle clean up on shutdown."""
-#     for settings in WORKSPACE_SETTINGS.values():
-#         if get_mypy_info(settings).is_daemon:
-#             try:
-#                 _run_dmypy_command([], copy.deepcopy(settings), "stop")
-#             except Exception:
-#                 pass
-
-
-# def _log_version_info() -> None:
-#     for settings in WORKSPACE_SETTINGS.values():
-#         code_workspace = settings["workspaceFS"]
-#         actual_version = get_mypy_info(settings).version
-#         min_version = parse_version(MIN_VERSION)
-
-#         if actual_version < min_version:
-#             log_error(
-#                 f"Version of linter running for {code_workspace} is NOT supported:\r\n"
-#                 f"SUPPORTED {TOOL_MODULE}>={min_version}\r\n"
-#                 f"FOUND {TOOL_MODULE}=={actual_version}\r\n"
-#             )
-#         else:
-#             log_to_output(
-#                 f"SUPPORTED {TOOL_MODULE}>={min_version}\r\n"
-#                 f"FOUND {TOOL_MODULE}=={actual_version}\r\n"
-#             )
 
 
 # *****************************************************
@@ -470,172 +219,6 @@ def _get_document_key(document: workspace.Document):
             document_workspace = document_workspace.parent
 
     return None
-
-
-def _get_settings_by_document(document: workspace.Document | None):
-    if document is None or document.path is None:
-        return list(WORKSPACE_SETTINGS.values())[0]
-
-    key = _get_document_key(document)
-    if key is None:
-        # This is either a non-workspace file or there is no workspace.
-        key = utils.normalize_path(pathlib.Path(document.path).parent)
-        return {
-            "cwd": key,
-            "workspaceFS": key,
-            "workspace": uris.from_fs_path(key),
-            **_get_global_defaults(),
-        }
-
-    return WORKSPACE_SETTINGS[str(key)]
-
-
-# # *****************************************************
-# # Internal execution APIs.
-# # *****************************************************
-# def _get_dmypy_args(settings: Dict[str, Any], command: str) -> List[str]:
-#     """Returns dmypy args for the given command.
-#     Example:
-#     For 'run' command returns ['--status-file', '/tmp/dmypy_status.json', 'run', '--']
-
-#     Allowed commands:
-#     - start   : Start daemon
-#     - restart : Restart daemon (stop or kill followed by start)
-#     - status  : Show daemon status
-#     - stop    : Stop daemon (asks it politely to go away)
-#     - kill    : Kill daemon (kills the process)
-#     - check   : Check some files (requires daemon)
-#     - run     : Check some files, [re]starting daemon if necessary
-#     - recheck : Re-check the previous list of files, with optional modifications (requires daemon)
-#     - suggest : Suggest a signature or show call sites for a specific function
-#     - inspect : Locate and statically inspect expression(s)
-#     - hang    : Hang for 100 seconds
-#     - daemon  : Run daemon in foreground
-#     """
-#     key = utils.normalize_path(settings["workspaceFS"])
-#     valid_commands = [
-#         "start",
-#         "restart",
-#         "status",
-#         "stop",
-#         "kill",
-#         "check",
-#         "run",
-#         "recheck",
-#         "suggest",
-#         "inspect",
-#         "hang",
-#         "daemon",
-#     ]
-#     if command not in valid_commands:
-#         log_error(f"Invalid dmypy command: {command}")
-#         raise ValueError(f"Invalid dmypy command: {command}")
-
-#     if key not in DMYPY_ARGS:
-#         STATUS_FILE_NAME = os.fspath(
-#             DMYPY_STATUS_FILE_ROOT / f"status-{str(uuid.uuid4())}.json"
-#         )
-#         args = ["--status-file", STATUS_FILE_NAME]
-#         DMYPY_ARGS[key] = args
-
-#     if command in ["start", "restart", "status", "stop", "kill"]:
-#         return DMYPY_ARGS[key] + [command]
-
-#     return DMYPY_ARGS[key] + [command, "--"]
-
-
-def _get_env_vars(settings: Dict[str, Any]) -> Dict[str, str]:
-    new_env = {
-        "PYTHONUTF8": "1",
-    }
-    if settings.get("extraPaths", []):
-        mypy_path = os.environ.get("MYPYPATH", "").split(os.pathsep)
-        mypy_path += settings.get("extraPaths", [])
-        new_env["MYPYPATH"] = os.pathsep.join([p for p in mypy_path if p])
-
-    if settings.get("importStrategy") == "useBundled":
-        pythonpath = os.environ.get("PYTHONPATH", "").split(os.pathsep)
-        pythonpath = [BUNDLED_LIBS] + pythonpath
-        new_env["PYTHONPATH"] = os.pathsep.join(pythonpath)
-
-    return new_env
-
-
-# def _run_tool_on_document(
-#     document: workspace.Document,
-#     extra_args: Sequence[str] = [],
-# ) -> utils.RunResult | None:
-#     """Runs tool on the given document.
-
-#     if use_stdin is true then contents of the document is passed to the
-#     tool via stdin.
-#     """
-#     if str(document.uri).startswith("vscode-notebook-cell"):
-#         # We don't support running mypy on notebook cells.
-#         log_to_output("Skipping mypy on notebook cells.")
-#         return None
-
-#     if utils.is_stdlib_file(document.path):
-#         log_to_output("Skipping mypy on stdlib file: " + document.path)
-#         return None
-
-#     # deep copy here to prevent accidentally updating global settings.
-#     settings = copy.deepcopy(_get_settings_by_document(document))
-#     cwd = settings["cwd"]
-
-#     if settings["path"]:
-#         argv = settings["path"]
-#     else:
-#         argv = settings["interpreter"] or [sys.executable]
-#         argv += ["-m", "mypy.dmypy" if get_mypy_info(settings).is_daemon else "mypy"]
-#     if get_mypy_info(settings).is_daemon:
-#         argv += _get_dmypy_args(settings, "run")
-#     argv += TOOL_ARGS + settings["args"] + extra_args
-#     if settings["reportingScope"] == "file":
-#         argv += [document.path]
-#     else:
-#         argv += [cwd]
-
-#     log_to_output(" ".join(argv))
-#     log_to_output(f"CWD Server: {cwd}")
-#     result = utils.run_path(
-#         argv=argv,
-#         cwd=cwd,
-#         env=_get_env_vars(settings),
-#     )
-#     if result.stderr:
-#         log_to_output(result.stderr)
-
-#     log_to_output(f"{document.uri} :\r\n{result.stdout}")
-#     return result
-
-
-# def _run_dmypy_command(
-#     extra_args: Sequence[str], settings: Dict[str, Any], command: str
-# ) -> utils.RunResult:
-#     if not get_mypy_info(settings).is_daemon:
-#         log_error(f"dmypy command called in non-daemon context: {command}")
-#         raise ValueError(f"dmypy command called in non-daemon context: {command}")
-
-#     cwd = settings["cwd"]
-
-#     if settings["path"]:
-#         argv = settings["path"]
-#     else:
-#         argv = settings["interpreter"] or [sys.executable]
-#         argv += ["-m", "mypy.dmypy"]
-
-#     argv += _get_dmypy_args(settings, command)
-#     argv += extra_args
-#     log_to_output(" ".join(argv))
-#     log_to_output(f"CWD Server: {cwd}")
-
-#     result = utils.run_path(argv=argv, cwd=cwd, env=_get_env_vars(settings))
-#     if result.stderr:
-#         log_to_output(result.stderr)
-
-#     log_to_output(f"\r\n{result.stdout}\r\n")
-#     return result
 
 
 # *****************************************************

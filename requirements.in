@@ -11,5 +11,4 @@
 # Required packages
 pygls
 packaging
-# mypy
 jaclang
