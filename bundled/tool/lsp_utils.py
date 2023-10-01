@@ -661,8 +661,10 @@ class ImportPass(Pass):
     A pass that extracts imports from a JAC file
     """
 
-    output = []
-
+    def before_pass(self) -> None:
+        self.output = []
+        return super().before_pass()
+    
     def enter_import(self, node: ast.Import):
         self.output.append(
             {
