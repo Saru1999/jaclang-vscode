@@ -58,7 +58,7 @@ LSP_SERVER.dep_table = {}
 def did_change(ls, params: lsp.DidChangeTextDocumentParams):
     """Stuff to happen on text document did change"""
     utils.update_doc_tree(ls, params.text_document.uri)
-    # utils.validate(ls, params)
+    utils.validate(ls, params)
 
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DID_SAVE)

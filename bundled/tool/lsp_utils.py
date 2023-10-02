@@ -243,12 +243,23 @@ def _run_api(
 # Jaseci Validation
 # **********************************************************
 
-from jaclang.jac.lexer import JacLexer
-from jaclang.jac.parser import JacParser
+from jaclang.jac.transform import Alert
+from jaclang.jac.parser import JacLexer, JacParser
+from jaclang.jac.passes.blue import pass_schedule
 
 import re
-
 from lsprotocol.types import Diagnostic, DiagnosticSeverity, Position, Range
+
+
+def jac_to_errors(
+    file_path: str, source: str, base_dir: str = "", schedule=pass_schedule
+) -> list[Alert]:
+    """Converts JAC source to errors if any"""
+    lex = JacLexer(mod_path=file_path, input_ir=source, base_path=base_dir)
+    prse = JacParser(mod_path=file_path, input_ir=lex.ir, base_path=base_dir, prior=lex)
+    for i in schedule:
+        prse = i(mod_path=file_path, input_ir=prse.ir, base_path=base_dir, prior=prse)
+    return prse.errors_had
 
 
 def validate(ls, params):
@@ -264,27 +275,20 @@ def validate(ls, params):
 def _validate_jac(doc_path: str, source: str) -> list:
     """validate jac file"""
     diagnostics = []
-    lex = JacLexer(mod_path="", input_ir=source).ir
-    prse = JacParser(mod_path="", input_ir=lex)
-
-    if prse.errors_had or prse.warnings_had:
-        combined = prse.errors_had + prse.warnings_had
-        for err in combined:
-            line = int(re.findall(r"Line (\d+)", err)[0].replace("Line ", ""))
-            msg = " ".join(err.split(",")[1:])
-            diagnostics.append(
-                Diagnostic(
-                    range=Range(
-                        start=Position(line=line - 1, character=0),
-                        end=Position(line=line - 1, character=0),
-                    ),
-                    message=msg,
-                    severity=DiagnosticSeverity.Error
-                    if err in prse.errors_had
-                    else DiagnosticSeverity.Warning,
-                )
+    errors = jac_to_errors(doc_path, source)
+    for err in errors:
+        msg = err.msg
+        line = err.line
+        diagnostics.append(
+            Diagnostic(
+                range=Range(
+                    start=Position(line=line - 1, character=0),
+                    end=Position(line=line - 1, character=0),
+                ),
+                message=msg,
+                severity=DiagnosticSeverity.Error,
             )
-
+        )
     return diagnostics
 
 
@@ -661,10 +665,8 @@ class ImportPass(Pass):
     A pass that extracts imports from a JAC file
     """
 
-    def before_pass(self) -> None:
-        self.output = []
-        return super().before_pass()
-    
+    output = []
+
     def enter_import(self, node: ast.Import):
         self.output.append(
             {
