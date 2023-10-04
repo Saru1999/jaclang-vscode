@@ -65,7 +65,10 @@ def did_change(ls, params: lsp.DidChangeTextDocumentParams):
 def did_save(ls, params: lsp.DidSaveTextDocumentParams):
     """Stuff to happen on text document did save"""
     utils.update_doc_tree(ls, params.text_document.uri)
-    # utils.validate(ls, params)
+    utils.validate(ls, params)
+    log_to_output(
+        f"Workspace Filled: {ls.workspace_filled}\n DEP TABLE: {ls.dep_table}"
+    )
 
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DID_CLOSE)
@@ -79,7 +82,7 @@ async def did_open(ls, params: lsp.DidOpenTextDocumentParams):
     """Stuff to happen on text document did open"""
     if not ls.workspace_filled:
         utils.fill_workspace(ls)
-    # utils.validate(ls, params)
+    utils.validate(ls, params)
 
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_COMPLETION)
@@ -120,8 +123,9 @@ def definition(ls, params: lsp.DefinitionParams):
     """Returns definition of a symbol."""
     doc = ls.workspace.get_document(params.text_document.uri)
     position = params.position
-    print(doc.symbols, position)
-    ls.show_message("Text Document Definition")
+    # get the symbol at the current position
+    symbol = utils.get_symbol_at_position(doc, position)
+    ls.show_message(f"Text Document Definition at {symbol.name if symbol else None}")
     return None
 
 

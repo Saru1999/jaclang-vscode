@@ -282,8 +282,8 @@ def _validate_jac(doc_path: str, source: str) -> list:
         diagnostics.append(
             Diagnostic(
                 range=Range(
-                    start=Position(line=line - 1, character=0),
-                    end=Position(line=line - 1, character=0),
+                    start=Position(line=line, character=0),
+                    end=Position(line=line, character=0),
                 ),
                 message=msg,
                 severity=DiagnosticSeverity.Error,
@@ -422,7 +422,7 @@ import os
 from lsprotocol.types import TextDocumentItem, SymbolInformation, SymbolKind, Location
 
 from jaclang.jac.passes import Pass
-from jaclang.jac.passes.blue.ast_build_pass import AstBuildPass
+from jaclang.jac.passes.blue import AstBuildPass, ImportPass, pass_schedule as blue_ps
 import jaclang.jac.absyntree as ast
 from jaclang.jac.transpiler import jac_file_to_pass
 
@@ -464,25 +464,45 @@ def update_doc_deps(ls: LanguageServer, doc_uri: str):
     Update the dependencies of a document
     """
     doc = ls.workspace.get_document(doc_uri)
+    doc_url = doc.uri.replace("file://", "")
     doc.dependencies = {}
-    import_prse = jac_file_to_pass(
-        file_path=doc.path, target=ImportPass, schedule=[AstBuildPass, ImportPass]
-    )
-    ls.dep_table[doc.path] = [s for s in import_prse.output if s["is_jac_import"]]
-    for dep in import_prse.output:
+    imports = _get_imports_from_jac_file(doc_url)
+    ls.dep_table[doc_url] = [s for s in imports if s["is_jac_import"]]
+    for dep in imports:
         if dep["is_jac_import"]:
-            architypes = _get_architypes_from_jac_file(
-                os.path.join(os.path.dirname(doc.path), dep["path"])
+            import_file_path = os.path.join(
+                os.path.dirname(doc_url), dep["path"], ".jac"
             )
+            architypes = _get_architypes_from_jac_file(import_file_path)
             new_symbols = get_doc_symbols(
                 ls,
-                f"file://{os.path.join(os.path.dirname(doc.path), dep['path'], '.jac')}",
+                f"file://{import_file_path}",
                 architypes=architypes,
             )
             dependencies = {
                 dep["path"]: {"architypes": architypes, "symbols": new_symbols}
             }
             doc.dependencies.update(dependencies)
+
+
+def _get_imports_from_jac_file(file_path: str) -> list:
+    """
+    Return a list of imports in the document
+    """
+    imports = []
+    import_prse = jac_file_to_pass(
+        file_path=file_path, target=ImportPass, schedule=blue_ps
+    )
+    for i in import_prse.ir.body:
+        if isinstance(i, ast.Import):
+            imports.append(
+                {
+                    "path": i.path.path_str.replace(".", os.sep),
+                    "is_jac_import": i.lang.value == "jac",
+                    "line": i.line,
+                }
+            )
+    return imports
 
 
 def get_symbol_data(ls: LanguageServer, uri: str, name: str, architype: str):
@@ -586,6 +606,20 @@ def _get_architypes_from_jac_file(file_path: str) -> dict[str, list]:
     return architype_prse.output
 
 
+def get_symbol_at_position(doc, position: Position):
+    """
+    Return the symbol at a position
+    """
+    symbols = doc.symbols
+    for symbol in symbols:
+        if (
+            symbol.location.range.start.line <= position.line
+            and symbol.location.range.end.line >= position.line
+        ):
+            return symbol
+    return None
+
+
 def _get_symbol_kind(architype: str) -> SymbolKind:
     """
     Return the symbol kind of an architype
@@ -658,31 +692,3 @@ class ArchitypePass(Pass):
         architype["block_start"] = {"line": 0, "col": 0}  # TODO: fix this
 
         self.output[self.output_key_map[node.arch_type.name]].append(architype)
-
-
-class ImportPass(Pass):
-    """
-    A pass that extracts imports from a JAC file
-    """
-
-    output = []
-
-    def enter_import(self, node: ast.Import):
-        self.output.append(
-            {
-                "is_jac_import": node.lang.value == "jac",
-                "path": node.path.path_str,
-                "line": node.line,
-            }
-        )
-
-
-class ReferencePass(Pass):
-    """
-    A pass that extracts references from a JAC file
-    """
-
-    output = []
-
-    def enter_node(self, node: ast.AstNode):
-        pass
