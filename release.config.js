@@ -3,14 +3,7 @@ const config = {
     plugins: [
         '@semantic-release/commit-analyzer',
         '@semantic-release/release-notes-generator',
-        [
-            '@semantic-release/git',
-            {
-                assets: ['jaseci-extension.vsix'],
-                message: 'chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}',
-            },
-        ],
-        '@semantic-release/github',
+        ['@semantic-release/github', { assets: [{ path: 'build/jaseci-extension.vsix', label: 'Jaseci Extension (VSIX)' }] }],
     ],
 };
 

@@ -63,7 +63,7 @@
         "lint": "eslint src --ext ts",
         "format-check": "prettier --check 'src/**/*.ts' 'build/**/*.yml' '.github/**/*.yml'",
         "tests": "node ./out/test/ts_tests/runTest.js",
-        "vsce-package": "vsce package -o jaseci-extension.vsix"
+        "vsce-package": "mkdir build && vsce package -o build/jaseci-extension.vsix"
     },
     "contributes": {
         "configuration": {
