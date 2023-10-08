@@ -6,7 +6,7 @@ const config = {
         [
             '@semantic-release/git',
             {
-                assets: ['*.vsix'],
+                assets: ['jaseci-extension.vsix'],
                 message: 'chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}',
             },
         ],
