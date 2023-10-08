@@ -184,6 +184,8 @@
         "vscode-languageclient": "^8.1.0"
     },
     "devDependencies": {
+        "@semantic-release/git": "^10.0.1",
+        "@semantic-release/github": "^9.2.1",
         "@types/chai": "^4.3.6",
         "@types/fs-extra": "^11.0.2",
         "@types/glob": "^8.1.0",
@@ -200,6 +202,7 @@
         "glob": "^10.3.4",
         "mocha": "^10.2.0",
         "prettier": "^3.0.3",
+        "semantic-release": "^22.0.5",
         "sinon": "^16.0.0",
         "ts-loader": "^9.4.4",
         "typemoq": "^2.1.0",
