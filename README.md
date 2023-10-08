@@ -45,7 +45,7 @@ From the command palette (View > Command Palette ...), run the `Developer: Set L
 ### Setup
 Install Nox (Make sure to have python 3.11)
 ```bash
-pip install nox 
+pip install nox
 ```
 Install Dependencies (both Python and Node.js)
 ```bash
@@ -62,6 +62,3 @@ npm run vsce-package
 ```
 
 Then you can install the extension on your VSCode using this https://code.visualstudio.com/docs/editor/extension-marketplace
-
-
-
