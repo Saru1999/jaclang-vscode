@@ -10,7 +10,7 @@
     },
     "publisher": "jaseci-labs",
     "license": "MIT",
-    "icon": "icon.png",
+    "icon": "./assets/icon.png",
     "homepage": "https://www.jac-lang.org/",
     "repository": {
         "type": "git",
@@ -158,8 +158,8 @@
                 ],
                 "configuration": "./language-configuration.json",
                 "icon": {
-                    "light": "file-icon.svg",
-                    "dark": "file-icon.svg"
+                    "light": "./assets/file-icon.svg",
+                    "dark": "./assets/file-icon.svg"
                 }
             }
         ],
