@@ -1,9 +1,19 @@
-<!-- Icon.png in 100px * 100px in HTML -->
 
 
-# <img src="icon.png" alt="Jaseci Logo" width="50" height="50"> Jaseci Extension for VScode <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Visual_Studio_Code_1.35_icon.svg/2048px-Visual_Studio_Code_1.35_icon.svg.png" alt="Jaseci Logo" width="50" height="50">
+
+# <img src="icon.png" alt="Jaseci Logo" width="50" height="50"> Jaclang Language Extension for VScode <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Visual_Studio_Code_1.35_icon.svg/2048px-Visual_Studio_Code_1.35_icon.svg.png" alt="Jaseci Logo" width="50" height="50">
 
 ## Usage
+
+## Features
+
+1. Auto-Completion
+2. Snippets
+3. Syntax Highlighting
+4. Hover
+5. Definition
+6. Error Diagnostics
+7. Auto-Formatting
 
 ## Settings
 
@@ -29,16 +39,29 @@ From the command palette (View > Command Palette ...), run the `Developer: Set L
 ### Pre-requisites
 - [Node.js](https://nodejs.org/en/)
 - [VS Code](https://code.visualstudio.com/)
-- [Python](https://www.python.org/)(3.8)
-  - [Conda](https://docs.conda.io/en/latest/) (optional) `conda create -n vscode-jaseci python=3.8 -y`
+- [Python](https://www.python.org/)(3.11)
+  - [Conda](https://docs.conda.io/en/latest/) (optional) `conda create -n vscode-jaseci python=3.11 -y`
 
 ### Setup
-Install Nox
+Install Nox (Make sure to have python 3.11)
 ```bash
-pip install nox
+pip install nox 
 ```
 Install Dependencies (both Python and Node.js)
 ```bash
 nox --session setup
 ```
 You are ready to run the extension in a development environment.
+
+### Build
+
+To build the `.vsix` (VSCode Extension file)
+
+```bash
+npm run vsce-package
+```
+
+Then you can install the extension on your VSCode using this https://code.visualstudio.com/docs/editor/extension-marketplace
+
+
+
