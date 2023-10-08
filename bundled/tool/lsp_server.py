@@ -56,33 +56,81 @@ LSP_SERVER.dep_table = {}
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DID_CHANGE)
 def did_change(ls, params: lsp.DidChangeTextDocumentParams):
-    """Stuff to happen on text document did change"""
+    """
+    Things to happen on text document did change:
+    1. Update the document tree
+    2. Validate the document
+    """
     utils.update_doc_tree(ls, params.text_document.uri)
     utils.validate(ls, params)
 
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DID_SAVE)
 def did_save(ls, params: lsp.DidSaveTextDocumentParams):
-    """Stuff to happen on text document did save"""
+    """
+    Things to happen on text document did save:
+    1. Update the document tree
+    2. Validate the document
+    3. Format the document (if enabled jaseci.format_on_save)
+    """
     utils.update_doc_tree(ls, params.text_document.uri)
     utils.validate(ls, params)
-    log_to_output(
-        f"Workspace Filled: {ls.workspace_filled}\n DEP TABLE: {ls.dep_table}"
-    )
 
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DID_CLOSE)
 def did_close(ls, params: lsp.DidCloseTextDocumentParams):
-    """Stuff to happen on text document did close"""
-    ls.show_message("Text Document Did Close")
+    """
+    TODO Things to happen on text document did close:
+    """
+    pass
 
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DID_OPEN)
 async def did_open(ls, params: lsp.DidOpenTextDocumentParams):
-    """Stuff to happen on text document did open"""
+    """
+    Things to happen on text document did open:
+    1. If workspace is not filled, fill it.
+    2. Validate the document
+    """
     if not ls.workspace_filled:
         utils.fill_workspace(ls)
     utils.validate(ls, params)
+
+
+@LSP_SERVER.feature(lsp.WORKSPACE_DID_CREATE_FILES)
+def did_create_files(ls, params: lsp.CreateFilesParams):
+    """
+    TODO Things to happen on workspace did create files:
+    1. Set the workspace filled flag to False
+    2. Fill the workspace
+    """
+    pass
+
+
+@LSP_SERVER.feature(lsp.WORKSPACE_DID_DELETE_FILES)
+def did_delete_files(ls, params: lsp.DeleteFilesParams):
+    """
+    TODO Things to happen on workspace did delete files:
+    1. Set the workspace filled flag to False
+    2. Remove the document from the workspace
+    3. Check whether the document is a dependency of any other document
+    4. If yes, Inform the user that the document is a dependency of other documents
+    5. If no, delete the document
+    """
+    pass
+
+
+@LSP_SERVER.feature(lsp.WORKSPACE_DID_RENAME_FILES)
+def did_rename_files(ls, params: lsp.RenameFilesParams):
+    """
+    TODO Things to happen on workspace did rename files:
+    1. Set the workspace filled flag to False
+    2. Remove the document from the workspace
+    3. Check whether the document is a dependency of any other document
+    4. If yes, Inform the user that the document is a dependency of other documents
+    5. If no, rename the document or fill the workspace
+    """
+    pass
 
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_COMPLETION)
@@ -120,13 +168,18 @@ def document_symbol(ls, params: lsp.DocumentSymbolParams):
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DEFINITION)
 def definition(ls, params: lsp.DefinitionParams):
-    """Returns definition of a symbol."""
-    doc = ls.workspace.get_document(params.text_document.uri)
-    position = params.position
-    # get the symbol at the current position
-    symbol = utils.get_symbol_at_position(doc, position)
-    ls.show_message(f"Text Document Definition at {symbol.name if symbol else None}")
-    return None
+    """
+    TODO Things to happen on text document definition:
+    """
+    pass
+
+
+@LSP_SERVER.feature(lsp.TEXT_DOCUMENT_HOVER)
+def hover(ls, params: lsp.HoverParams):
+    """
+    TODO Things to happen on text document hover:
+    """
+    pass
 
 
 # **********************************************************
@@ -208,21 +261,6 @@ def _get_settings_by_path(file_path: pathlib.Path):
 
     setting_values = list(WORKSPACE_SETTINGS.values())
     return setting_values[0]
-
-
-def _get_document_key(document: workspace.Document):
-    if WORKSPACE_SETTINGS:
-        document_workspace = pathlib.Path(document.path)
-        workspaces = {s["workspaceFS"] for s in WORKSPACE_SETTINGS.values()}
-
-        # Find workspace settings for the given file.
-        while document_workspace != document_workspace.parent:
-            norm_path = utils.normalize_path(document_workspace)
-            if norm_path in workspaces:
-                return norm_path
-            document_workspace = document_workspace.parent
-
-    return None
 
 
 # *****************************************************
