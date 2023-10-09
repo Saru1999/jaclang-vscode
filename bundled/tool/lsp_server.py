@@ -37,7 +37,7 @@ update_sys_path(
 # **********************************************************
 import lsp_utils as utils
 import lsprotocol.types as lsp
-from pygls import server, uris, workspace
+from pygls import server, uris
 
 WORKSPACE_SETTINGS = {}
 GLOBAL_SETTINGS = {}
@@ -52,6 +52,8 @@ LSP_SERVER.dep_table = {}
 # **********************************************************
 # Language Server features
 # **********************************************************
+
+# Text Document Support
 
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DID_CHANGE)
@@ -97,16 +99,6 @@ async def did_open(ls, params: lsp.DidOpenTextDocumentParams):
     utils.validate(ls, params)
 
 
-@LSP_SERVER.feature(lsp.WORKSPACE_DID_CREATE_FILES)
-def did_create_files(ls, params: lsp.CreateFilesParams):
-    """
-    TODO Things to happen on workspace did create files:
-    1. Set the workspace filled flag to False
-    2. Fill the workspace
-    """
-    pass
-
-
 @LSP_SERVER.feature(lsp.WORKSPACE_DID_DELETE_FILES)
 def did_delete_files(ls, params: lsp.DeleteFilesParams):
     """
@@ -133,11 +125,83 @@ def did_rename_files(ls, params: lsp.RenameFilesParams):
     pass
 
 
+@LSP_SERVER.feature(lsp.WORKSPACE_DID_CREATE_FILES)
+def did_create_files(ls, params: lsp.CreateFilesParams):
+    """
+    TODO Things to happen on workspace did create files:
+    1. Set the workspace filled flag to False
+    2. Fill the workspace
+    """
+    pass
+
+
+# Notebook Support
+
+
+@LSP_SERVER.feature(lsp.NOTEBOOK_DOCUMENT_DID_OPEN)
+async def did_open(ls, params: lsp.DidOpenNotebookDocumentParams):
+    pass
+
+
+@LSP_SERVER.feature(lsp.NOTEBOOK_DOCUMENT_DID_CLOSE)
+async def did_open(ls, params: lsp.DidCloseNotebookDocumentParams):
+    pass
+
+
+@LSP_SERVER.feature(lsp.NOTEBOOK_DOCUMENT_DID_SAVE)
+async def did_open(ls, params: lsp.DidSaveNotebookDocumentParams):
+    pass
+
+
+@LSP_SERVER.feature(lsp.NOTEBOOK_DOCUMENT_DID_CHANGE)
+async def did_open(ls, params: lsp.DidChangeNotebookCellParams):
+    pass
+
+
+# Features
+
+
+@LSP_SERVER.feature(lsp.TEXT_DOCUMENT_FORMATTING)
+def formatting(ls, params: lsp.DocumentFormattingParams):
+    """
+    TODO Things to happen on text document formatting:
+    1. Format the document
+    """
+    pass
+
+
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_COMPLETION)
 def completions(params: Optional[lsp.CompletionParams] = None) -> lsp.CompletionList:
     """Returns completion items."""
     completion_items = utils.get_completion_items(LSP_SERVER, params)
     return lsp.CompletionList(is_incomplete=False, items=completion_items)
+
+
+@LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DOCUMENT_HIGHLIGHT)
+def document_highlight(ls, params: lsp.DocumentHighlightParams):
+    """
+    TODO Things to happen on text document document highlight:
+    """
+    pass
+
+
+@LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DEFINITION)
+def definition(ls, params: lsp.DefinitionParams):
+    """
+    TODO Things to happen on text document definition:
+    """
+    pass
+
+
+@LSP_SERVER.feature(lsp.TEXT_DOCUMENT_HOVER)
+def hover(ls, params: lsp.HoverParams):
+    """
+    TODO Things to happen on text document hover:
+    """
+    pass
+
+
+# Symbol Handling
 
 
 @LSP_SERVER.feature(lsp.WORKSPACE_SYMBOL)
@@ -164,22 +228,6 @@ def document_symbol(ls, params: lsp.DocumentSymbolParams):
         return [s for s in doc_symbols if s.location.uri == doc.uri]
     else:
         return [s for s in doc.symbols if s.location.uri == doc.uri]
-
-
-@LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DEFINITION)
-def definition(ls, params: lsp.DefinitionParams):
-    """
-    TODO Things to happen on text document definition:
-    """
-    pass
-
-
-@LSP_SERVER.feature(lsp.TEXT_DOCUMENT_HOVER)
-def hover(ls, params: lsp.HoverParams):
-    """
-    TODO Things to happen on text document hover:
-    """
-    pass
 
 
 # **********************************************************

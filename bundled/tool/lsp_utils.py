@@ -493,15 +493,16 @@ def _get_imports_from_jac_file(file_path: str) -> list:
     import_prse = jac_file_to_pass(
         file_path=file_path, target=ImportPass, schedule=blue_ps
     )
-    for i in import_prse.ir.body:
-        if isinstance(i, ast.Import):
-            imports.append(
-                {
-                    "path": i.path.path_str.replace(".", os.sep),
-                    "is_jac_import": i.lang.value == "jac",
-                    "line": i.line,
-                }
-            )
+    if hasattr(import_prse.ir, "body"):
+        for i in import_prse.ir.body:
+            if isinstance(i, ast.Import):
+                imports.append(
+                    {
+                        "path": i.path.path_str.replace(".", os.sep),
+                        "is_jac_import": i.lang.value == "jac",
+                        "line": i.line,
+                    }
+                )
     return imports
 
 
