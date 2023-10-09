@@ -422,9 +422,23 @@ import os
 from lsprotocol.types import TextDocumentItem, SymbolInformation, SymbolKind, Location
 
 from jaclang.jac.passes import Pass
-from jaclang.jac.passes.blue import AstBuildPass, ImportPass, pass_schedule as blue_ps
+from jaclang.jac.passes.blue import (
+    AstBuildPass,
+    ImportPass,
+    JacFormatPass,
+    pass_schedule as blue_ps,
+)
 import jaclang.jac.absyntree as ast
 from jaclang.jac.transpiler import jac_file_to_pass
+
+
+def format_jac(doc_uri: str) -> str:
+    format_pass_schedule = [AstBuildPass, JacFormatPass]
+    doc_url = doc_uri.replace("file://", "")
+    prse = jac_file_to_pass(
+        doc_url, target=JacFormatPass, schedule=format_pass_schedule
+    )
+    return prse.ir.meta["jac_code"]
 
 
 def fill_workspace(ls: LanguageServer):

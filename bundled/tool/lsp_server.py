@@ -164,10 +164,19 @@ async def did_open(ls, params: lsp.DidChangeNotebookCellParams):
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_FORMATTING)
 def formatting(ls, params: lsp.DocumentFormattingParams):
     """
-    TODO Things to happen on text document formatting:
-    1. Format the document
+    Formats the document.
     """
-    pass
+    doc_uri = params.text_document.uri
+    formatted_text = utils.format_jac(doc_uri)
+    return [
+        lsp.TextEdit(
+            range=lsp.Range(
+                start=lsp.Position(line=0, character=0),
+                end=lsp.Position(line=len(formatted_text), character=0),
+            ),
+            new_text=formatted_text,
+        )
+    ]
 
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_COMPLETION)
