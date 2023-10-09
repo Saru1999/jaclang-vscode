@@ -494,7 +494,7 @@ def _get_imports_from_jac_file(file_path: str) -> list:
         file_path=file_path, target=ImportPass, schedule=blue_ps
     )
     if hasattr(import_prse.ir, "body"):
-        for i in import_prse.ir.body:
+        for i in import_prse.ir.body.elements:
             if isinstance(i, ast.Import):
                 imports.append(
                     {
