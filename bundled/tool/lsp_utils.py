@@ -536,6 +536,18 @@ def get_symbol_data(ls: LanguageServer, uri: str, name: str, architype: str):
             return symbol
     else:
         return None
+    
+def is_contained(sym_location: lsp.Location, hover_position: lsp.Position) -> bool:
+    """
+    Returns True if the hover position is contained within the symbol location.
+    """
+    return (
+        sym_location.range.start.line <= hover_position.line
+        and sym_location.range.end.line >= hover_position.line
+        and sym_location.range.start.character <= hover_position.character
+        and sym_location.range.end.character >= hover_position.character
+    )
+
 
 
 def get_doc_symbols(
@@ -563,11 +575,11 @@ def get_doc_symbols(
                         range=Range(
                             start=Position(
                                 line=(element["line"] - 1) + shift_lines,
-                                character=element["col"],
+                                character=element["col_start"],
                             ),
                             end=Position(
-                                line=element["block_end"]["line"] + shift_lines,
-                                character=0,
+                                line=(element["line"] - 1) + shift_lines,
+                                character=element["col_end"],
                             ),
                         ),
                     ),
@@ -583,11 +595,11 @@ def get_doc_symbols(
                             range=Range(
                                 start=Position(
                                     line=var["line"] - 1 + shift_lines,
-                                    character=var["col"],
+                                    character=var["col_start"],
                                 ),
                                 end=Position(
                                     line=var["line"] + shift_lines,
-                                    character=var["col"] + len(var["name"]),
+                                    character=var["col_end"],
                                 ),
                             ),
                         ),
@@ -679,7 +691,8 @@ class ArchitypePass(Pass):
                             "type": "ability",
                             "name": node.name_ref.value,
                             "line": node.line,
-                            "col": node.name_ref.col_start,
+                            "col_start": node.name_ref.col_start,
+                            "col_end": node.name_ref.col_end,
                         }
                     )
                 except Exception as e:
@@ -691,7 +704,8 @@ class ArchitypePass(Pass):
                             "type": "has_var",
                             "name": var.name.value,
                             "line": var.line,
-                            "col": var.name.col_start,
+                            "col_start": var.name.col_start,
+                            "col_end": var.name.col_end,
                         }
                     )
         return vars
@@ -700,10 +714,9 @@ class ArchitypePass(Pass):
         architype = {}
         architype["name"] = node.name.value
         architype["line"] = node.name.line
-        architype["col"] = node.name.col_start
+        architype["col_start"] = node.name.col_start
+        architype["col_end"] = node.name.col_end
 
         architype["vars"] = self.extract_vars(node.body.kid)
-        architype["block_end"] = {"line": 0, "col": 0}  # TODO: fix this
-        architype["block_start"] = {"line": 0, "col": 0}  # TODO: fix this
 
         self.output[self.output_key_map[node.arch_type.name]].append(architype)

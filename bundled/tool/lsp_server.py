@@ -73,7 +73,6 @@ def did_save(ls, params: lsp.DidSaveTextDocumentParams):
     Things to happen on text document did save:
     1. Update the document tree
     2. Validate the document
-    3. Format the document (if enabled jaseci.format_on_save)
     """
     utils.update_doc_tree(ls, params.text_document.uri)
     utils.validate(ls, params)
@@ -83,6 +82,7 @@ def did_save(ls, params: lsp.DidSaveTextDocumentParams):
 def did_close(ls, params: lsp.DidCloseTextDocumentParams):
     """
     TODO Things to happen on text document did close:
+    1. Document level cleanup
     """
     pass
 
@@ -190,8 +190,19 @@ def completions(params: Optional[lsp.CompletionParams] = None) -> lsp.Completion
 def document_highlight(ls, params: lsp.DocumentHighlightParams):
     """
     TODO Things to happen on text document document highlight:
+    1. Highlight the Symbols
+    2. Use Python Syntax Highlighting for python blocks
     """
-    pass
+    higlights = []
+    doc = ls.workspace.get_document(params.text_document.uri)
+    for symbol in doc.symbols:
+        higlights.append(
+            lsp.DocumentHighlight(
+                range=symbol.location.range,
+                kind=lsp.DocumentHighlightKind.Read,
+            )
+        )
+    return higlights
 
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DEFINITION)
@@ -202,12 +213,40 @@ def definition(ls, params: lsp.DefinitionParams):
     pass
 
 
+
+
+
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_HOVER)
 def hover(ls, params: lsp.HoverParams):
     """
-    TODO Things to happen on text document hover:
+    Things to happen on text document hover:
+    1. Find the symbol at the specified position
+    2. Create a new Hover object with information about the symbol and return it
+    TODO: Add more information to the hover such as type, docstring if any, etc.
     """
-    pass
+    uri = params.text_document.uri
+    position = params.position
+    lsp_document = ls.workspace.get_document(uri)
+    if lsp_document is None:
+        return None
+
+    # Find the symbol at the specified position
+    symbol = None
+    for s in lsp_document.symbols:
+        if utils.is_contained(s.location, position):
+            symbol = s
+            break
+
+    # Create a new Hover object with information about the symbol and return it
+    if symbol is not None:
+        return lsp.Hover(
+            contents=lsp.MarkupContent(
+                kind=lsp.MarkupKind.PlainText, value=symbol.name
+            ),
+            range=symbol.location.range,
+        )
+
+    return None
 
 
 # Symbol Handling

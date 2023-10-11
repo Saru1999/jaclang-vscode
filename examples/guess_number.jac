@@ -15,10 +15,15 @@ node turn {
     can check with GuessGame entry;
 }
 
+::py::
+def add_one(x:int):
+    return x+1
+::py::
+
 
 :node:turn:ability:check {
     guess = "Guess a number between 1 and 100: " |> input;
-    if |> guess.isdigit()() {
+    if |> guess.isdigit {
         guess |> int |> <here>.process_guess;
     } else {
         "That's not a valid number! Try again." |> print;
@@ -32,7 +37,7 @@ node turn {
     end = <here>;
     
     for i = 0 to i < 10 by i += 1 {
-        end ++> end := :> turn()();
+        end ++> end := :> turn;
     }
     visit -->;    
 }
@@ -50,5 +55,5 @@ node turn {
 }
 
 with entry {
-    :> GuessGame() :> <root>;
+    :> GuessGame :> <root>;    
 }
