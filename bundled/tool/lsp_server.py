@@ -53,15 +53,17 @@ LSP_SERVER.dep_table = {}
 # Language Server features
 # **********************************************************
 
-# Text Document Support
+# JAC file Document Support
 
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DID_CHANGE)
 def did_change(ls, params: lsp.DidChangeTextDocumentParams):
     """
-    Things to happen on text document did change:
-    1. Update the document tree
-    2. Validate the document
+    Update the document tree and validate the changes made to the text document.
+
+    Args:
+        ls (LanguageServer): The language server instance.
+        params (lsp.DidChangeTextDocumentParams): The parameters for the text document change.
     """
     utils.update_doc_tree(ls, params.text_document.uri)
     utils.validate(ls, params)
@@ -70,9 +72,11 @@ def did_change(ls, params: lsp.DidChangeTextDocumentParams):
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DID_SAVE)
 def did_save(ls, params: lsp.DidSaveTextDocumentParams):
     """
-    Things to happen on text document did save:
-    1. Update the document tree
-    2. Validate the document
+    Updates the document tree and validates the saved text document.
+
+    Args:
+        ls (LanguageServer): The language server instance.
+        params (lsp.DidSaveTextDocumentParams): The parameters for the saved text document.
     """
     utils.update_doc_tree(ls, params.text_document.uri)
     utils.validate(ls, params)
@@ -80,19 +84,14 @@ def did_save(ls, params: lsp.DidSaveTextDocumentParams):
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DID_CLOSE)
 def did_close(ls, params: lsp.DidCloseTextDocumentParams):
-    """
-    TODO Things to happen on text document did close:
-    1. Document level cleanup
-    """
     pass
 
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DID_OPEN)
 async def did_open(ls, params: lsp.DidOpenTextDocumentParams):
     """
-    Things to happen on text document did open:
-    1. If workspace is not filled, fill it.
-    2. Validate the document
+    This function is called when a text document is opened in the client.
+    It fills the workspace if it is not already filled and validates the parameters.
     """
     if not ls.workspace_filled:
         utils.fill_workspace(ls)
@@ -102,37 +101,57 @@ async def did_open(ls, params: lsp.DidOpenTextDocumentParams):
 @LSP_SERVER.feature(lsp.WORKSPACE_DID_DELETE_FILES)
 def did_delete_files(ls, params: lsp.DeleteFilesParams):
     """
-    TODO Things to happen on workspace did delete files:
-    1. Set the workspace filled flag to False
-    2. Remove the document from the workspace
-    3. Check whether the document is a dependency of any other document
-    4. If yes, Inform the user that the document is a dependency of other documents
-    5. If no, delete the document
+    Callback function for when files are deleted from the workspace.
+
+    Args:
+        ls (LSPServer): The Language Server Protocol server instance.
+        params (lsp.DeleteFilesParams): The parameters for the delete files request.
     """
-    pass
+    ls.workspace_filled = False
+    deleted_doc = ls.workspace.get_document(params.files[0].uri)
+    for doc in ls.dep_table.keys():
+        if deleted_doc.uri in ls.dep_table[doc]:
+            # TODO: Inform the user that the document is a dependency of other documents
+            log_error(f"deleted {deleted_doc.uri} is a dependency of {doc}")
+            del ls.dep_table[doc]
+    ls.workspace.remove_document(deleted_doc.uri)
+    del ls.dep_table[deleted_doc.uri]
+    utils.fill_workspace(ls)
 
 
 @LSP_SERVER.feature(lsp.WORKSPACE_DID_RENAME_FILES)
 def did_rename_files(ls, params: lsp.RenameFilesParams):
     """
-    TODO Things to happen on workspace did rename files:
-    1. Set the workspace filled flag to False
-    2. Remove the document from the workspace
-    3. Check whether the document is a dependency of any other document
-    4. If yes, Inform the user that the document is a dependency of other documents
-    5. If no, rename the document or fill the workspace
+    Callback function for the LSP feature WORKSPACE_DID_RENAME_FILES.
+    Renames a file in the workspace and updates the dependency table accordingly.
+
+    Args:
+        ls (LSPServer): The LSP server instance.
+        params (lsp.RenameFilesParams): The parameters for the rename operation.
     """
-    pass
+    ls.workspace_filled = False
+    renamed_doc = ls.workspace.get_document(params.files[0].old_uri)
+    for doc in ls.dep_table.keys():
+        if renamed_doc.uri in ls.dep_table[doc]:
+            # TODO: Inform the user that the document is a dependency of other documents
+            log_error(f"Rename {renamed_doc.uri} is a dependency of {doc}")
+            del ls.dep_table[doc]
+    ls.workspace.remove_document(renamed_doc.uri)
+    del ls.dep_table[renamed_doc.uri]
+    utils.fill_workspace(ls)
 
 
 @LSP_SERVER.feature(lsp.WORKSPACE_DID_CREATE_FILES)
 def did_create_files(ls, params: lsp.CreateFilesParams):
     """
-    TODO Things to happen on workspace did create files:
-    1. Set the workspace filled flag to False
-    2. Fill the workspace
+    Callback function for when files are created in the workspace.
+
+    Args:
+        ls (LanguageServer): The language server instance.
+        params (lsp.CreateFilesParams): The parameters for the file creation.
     """
-    pass
+    ls.workspace_filled = False
+    utils.fill_workspace(ls)
 
 
 # Notebook Support
@@ -164,7 +183,15 @@ async def did_open(ls, params: lsp.DidChangeNotebookCellParams):
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_FORMATTING)
 def formatting(ls, params: lsp.DocumentFormattingParams):
     """
+    TODO: Selective Formatting needs to be implemented
     Formats the document.
+
+    :param ls: The language server instance.
+    :type ls: lsp.LanguageServer
+    :param params: The document formatting parameters.
+    :type params: lsp.DocumentFormattingParams
+    :return: A list of text edits to apply to the document.
+    :rtype: List[lsp.TextEdit]
     """
     doc_uri = params.text_document.uri
     formatted_text = utils.format_jac(doc_uri)
@@ -181,28 +208,36 @@ def formatting(ls, params: lsp.DocumentFormattingParams):
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_COMPLETION)
 def completions(params: Optional[lsp.CompletionParams] = None) -> lsp.CompletionList:
-    """Returns completion items."""
+    """
+    TODO: More intelligent completions
+    Returns a list of completion items for the given completion parameters.
+
+    :param params: The completion parameters.
+    :type params: Optional[lsp.CompletionParams]
+    :return: A list of completion items.
+    :rtype: lsp.CompletionList
+    """
     completion_items = utils.get_completion_items(LSP_SERVER, params)
     return lsp.CompletionList(is_incomplete=False, items=completion_items)
 
 
-@LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DOCUMENT_HIGHLIGHT)
-def document_highlight(ls, params: lsp.DocumentHighlightParams):
-    """
-    TODO Things to happen on text document document highlight:
-    1. Highlight the Symbols
-    2. Use Python Syntax Highlighting for python blocks
-    """
-    higlights = []
-    doc = ls.workspace.get_document(params.text_document.uri)
-    for symbol in doc.symbols:
-        higlights.append(
-            lsp.DocumentHighlight(
-                range=symbol.location.range,
-                kind=lsp.DocumentHighlightKind.Read,
-            )
-        )
-    return higlights
+# @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DOCUMENT_HIGHLIGHT)
+# def document_highlight(ls, params: lsp.DocumentHighlightParams):
+#     """
+#     TODO Things to happen on text document document highlight:
+#     1. Highlight the Symbols
+#     2. Use Python Syntax Highlighting for python blocks
+#     """
+#     higlights = []
+#     doc = ls.workspace.get_document(params.text_document.uri)
+#     for symbol in doc.symbols:
+#         higlights.append(
+#             lsp.DocumentHighlight(
+#                 range=symbol.location.range,
+#                 kind=lsp.DocumentHighlightKind.Read,
+#             )
+#         )
+#     return higlights
 
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DEFINITION)
@@ -213,16 +248,18 @@ def definition(ls, params: lsp.DefinitionParams):
     pass
 
 
-
-
-
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_HOVER)
 def hover(ls, params: lsp.HoverParams):
     """
-    Things to happen on text document hover:
-    1. Find the symbol at the specified position
-    2. Create a new Hover object with information about the symbol and return it
-    TODO: Add more information to the hover such as type, docstring if any, etc.
+    TODO: Add More information to the hover
+    Returns information about the symbol at the specified position.
+
+    :param ls: The Language Server instance.
+    :type ls: LanguageServer
+    :param params: The HoverParams object containing the URI and position of the symbol.
+    :type params: lsp.HoverParams
+    :return: A Hover object with information about the symbol.
+    :rtype: lsp.Hover
     """
     uri = params.text_document.uri
     position = params.position
