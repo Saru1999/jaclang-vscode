@@ -53,7 +53,7 @@ LSP_SERVER.dep_table = {}
 # Language Server features
 # **********************************************************
 
-# JAC file Document Support
+# Handle Document Operations
 
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DID_CHANGE)
@@ -98,51 +98,16 @@ async def did_open(ls, params: lsp.DidOpenTextDocumentParams):
     utils.validate(ls, params)
 
 
-@LSP_SERVER.feature(lsp.WORKSPACE_DID_DELETE_FILES)
-def did_delete_files(ls, params: lsp.DeleteFilesParams):
-    """
-    Callback function for when files are deleted from the workspace.
-
-    Args:
-        ls (LSPServer): The Language Server Protocol server instance.
-        params (lsp.DeleteFilesParams): The parameters for the delete files request.
-    """
-    ls.workspace_filled = False
-    deleted_doc = ls.workspace.get_document(params.files[0].uri)
-    for doc in ls.dep_table.keys():
-        if deleted_doc.uri in ls.dep_table[doc]:
-            # TODO: Inform the user that the document is a dependency of other documents
-            log_error(f"deleted {deleted_doc.uri} is a dependency of {doc}")
-            del ls.dep_table[doc]
-    ls.workspace.remove_document(deleted_doc.uri)
-    del ls.dep_table[deleted_doc.uri]
-    utils.fill_workspace(ls)
+# Handle File Operations
 
 
-@LSP_SERVER.feature(lsp.WORKSPACE_DID_RENAME_FILES)
-def did_rename_files(ls, params: lsp.RenameFilesParams):
-    """
-    Callback function for the LSP feature WORKSPACE_DID_RENAME_FILES.
-    Renames a file in the workspace and updates the dependency table accordingly.
-
-    Args:
-        ls (LSPServer): The LSP server instance.
-        params (lsp.RenameFilesParams): The parameters for the rename operation.
-    """
-    ls.workspace_filled = False
-    renamed_doc = ls.workspace.get_document(params.files[0].old_uri)
-    for doc in ls.dep_table.keys():
-        if renamed_doc.uri in ls.dep_table[doc]:
-            # TODO: Inform the user that the document is a dependency of other documents
-            log_error(f"Rename {renamed_doc.uri} is a dependency of {doc}")
-            del ls.dep_table[doc]
-    ls.workspace.remove_document(renamed_doc.uri)
-    del ls.dep_table[renamed_doc.uri]
-    utils.fill_workspace(ls)
-
-
-@LSP_SERVER.feature(lsp.WORKSPACE_DID_CREATE_FILES)
-def did_create_files(ls, params: lsp.CreateFilesParams):
+@LSP_SERVER.feature(
+    lsp.WORKSPACE_DID_CREATE_FILES,
+    lsp.FileOperationRegistrationOptions(
+        filters=[lsp.FileOperationFilter(pattern=lsp.FileOperationPattern("**/*.jac"))]
+    ),
+)
+def did_create_files(ls: server.LanguageServer, params: lsp.CreateFilesParams):
     """
     Callback function for when files are created in the workspace.
 
@@ -150,6 +115,70 @@ def did_create_files(ls, params: lsp.CreateFilesParams):
         ls (LanguageServer): The language server instance.
         params (lsp.CreateFilesParams): The parameters for the file creation.
     """
+    ls.workspace_filled = False
+    utils.fill_workspace(ls)
+
+
+@LSP_SERVER.feature(
+    lsp.WORKSPACE_DID_RENAME_FILES,
+    lsp.FileOperationRegistrationOptions(
+        filters=[lsp.FileOperationFilter(pattern=lsp.FileOperationPattern("**/*.jac"))]
+    ),
+)
+def did_rename_files(ls: server.LanguageServer, params: lsp.RenameFilesParams):
+    """
+    Callback function for when a file is renamed in the workspace.
+    Updates the dependency table and handles renaming of import statements.
+    """
+    new_uri = params.files[0].new_uri
+    old_uri = params.files[0].old_uri
+
+    ls.workspace_filled = False
+    dep_table_copy = ls.dep_table.copy()
+    for doc in dep_table_copy.keys():
+        if dep_table_copy[doc]:
+            for dep in dep_table_copy[doc]:
+                if dep["uri"] == old_uri:
+                    ls.show_message(
+                        f"Renamed {new_uri} is a dependency of {doc}",
+                        lsp.MessageType.Warning,
+                    )
+                    del ls.dep_table[doc]
+                    # FUTURE TODO: WINDOW_SHOW_MESSAGE_REQUEST is not yet supported by pygls
+                    # request_result = await show_message_request(ls, f"Renamed {new_uri} is a dependency of {doc}. Do you want to change the import statement?", ["Yes", "No"])
+                    request_result = "Yes"
+                    if request_result == "Yes":
+                        # TODO: Handle the rename of the import statement
+                        log_to_output("Accepted")
+    ls.workspace.remove_text_document(old_uri)
+    del ls.dep_table[old_uri.replace("file://", "")]
+    utils.fill_workspace(ls)
+
+
+@LSP_SERVER.feature(
+    lsp.WORKSPACE_DID_DELETE_FILES,
+    lsp.FileOperationRegistrationOptions(
+        filters=[lsp.FileOperationFilter(pattern=lsp.FileOperationPattern("**/*.jac"))]
+    ),
+)
+def did_delete_files(ls: server.LanguageServer, params: lsp.DeleteFilesParams):
+    """
+    Removes the specified files from the workspace and dependency table.
+    If a file is a dependency of another file, it will also be removed from the dependency table.
+    """
+    for _file in params.files:
+        ls.workspace.remove_text_document(_file.uri)
+        del ls.dep_table[_file.uri.replace("file://", "")]
+        dep_table_copy = ls.dep_table.copy()
+        for doc in dep_table_copy.keys():
+            if dep_table_copy[doc]:
+                for dep in dep_table_copy[doc]:
+                    if dep["uri"] == _file.uri:
+                        ls.show_message(
+                            f"Deleted {_file.uri} is a dependency of {doc}",
+                            lsp.MessageType.Warning,
+                        )
+                        del ls.dep_table[doc]
     ls.workspace_filled = False
     utils.fill_workspace(ls)
 

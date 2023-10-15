@@ -484,8 +484,8 @@ def update_doc_deps(ls: LanguageServer, doc_uri: str):
     ls.dep_table[doc_url] = [s for s in imports if s["is_jac_import"]]
     for dep in imports:
         if dep["is_jac_import"]:
-            import_file_path = os.path.join(
-                os.path.dirname(doc_url), dep["path"], ".jac"
+            import_file_path = (
+                f"{os.path.join(os.path.dirname(doc_url), dep['path'])}.jac"
             )
             architypes = _get_architypes_from_jac_file(import_file_path)
             new_symbols = get_doc_symbols(
@@ -497,6 +497,9 @@ def update_doc_deps(ls: LanguageServer, doc_uri: str):
                 dep["path"]: {"architypes": architypes, "symbols": new_symbols}
             }
             doc.dependencies.update(dependencies)
+
+
+from pathlib import Path
 
 
 def _get_imports_from_jac_file(file_path: str) -> list:
@@ -515,6 +518,7 @@ def _get_imports_from_jac_file(file_path: str) -> list:
                         "path": i.path.path_str.replace(".", os.sep),
                         "is_jac_import": i.lang.value == "jac",
                         "line": i.line,
+                        "uri": f"file://{Path(file_path).parent.joinpath(i.path.path_str.replace('.', os.sep))}.jac",
                     }
                 )
     return imports
@@ -536,7 +540,8 @@ def get_symbol_data(ls: LanguageServer, uri: str, name: str, architype: str):
             return symbol
     else:
         return None
-    
+
+
 def is_contained(sym_location: lsp.Location, hover_position: lsp.Position) -> bool:
     """
     Returns True if the hover position is contained within the symbol location.
@@ -547,7 +552,6 @@ def is_contained(sym_location: lsp.Location, hover_position: lsp.Position) -> bo
         and sym_location.range.start.character <= hover_position.character
         and sym_location.range.end.character >= hover_position.character
     )
-
 
 
 def get_doc_symbols(

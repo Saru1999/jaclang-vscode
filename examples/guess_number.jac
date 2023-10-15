@@ -15,11 +15,8 @@ node turn {
     can check with GuessGame entry;
 }
 
-::py::
 def add_one(x:int):
     return x+1
-::py::
-
 
 :node:turn:ability:check {
     guess = "Guess a number between 1 and 100: " |> input;
