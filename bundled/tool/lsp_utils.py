@@ -243,8 +243,9 @@ def _run_api(
 # Jaseci Validation
 # **********************************************************
 
-from jaclang.jac.transform import Alert
-from jaclang.jac.parser import JacLexer, JacParser
+from jaclang.jac.passes.transform import Alert
+from jaclang.jac.parser import JacParser
+from jaclang.jac.absyntree import SourceString
 from jaclang.jac.passes.blue import pass_schedule
 
 import re
@@ -255,8 +256,8 @@ def jac_to_errors(
     file_path: str, source: str, base_dir: str = "", schedule=pass_schedule
 ) -> list[Alert]:
     """Converts JAC source to errors if any"""
-    lex = JacLexer(mod_path=file_path, input_ir=source, base_path=base_dir)
-    prse = JacParser(mod_path=file_path, input_ir=lex.ir, base_path=base_dir, prior=lex)
+    source = SourceString(source)
+    prse = JacParser(mod_path=file_path, input_ir=source, base_path=base_dir, prior=source)
     for i in schedule:
         prse = i(mod_path=file_path, input_ir=prse.ir, base_path=base_dir, prior=prse)
     return prse.errors_had
@@ -278,12 +279,12 @@ def _validate_jac(doc_path: str, source: str) -> list:
     errors = jac_to_errors(doc_path, source)
     for err in errors:
         msg = err.msg
-        line = err.line
+        loc = err.loc
         diagnostics.append(
             Diagnostic(
                 range=Range(
-                    start=Position(line=line, character=0),
-                    end=Position(line=line, character=0),
+                    start=Position(line=loc.first_line, character=loc.col_start),
+                    end=Position(line=loc.last_line, character=loc.col_end),
                 ),
                 message=msg,
                 severity=DiagnosticSeverity.Error,
@@ -423,7 +424,6 @@ from lsprotocol.types import TextDocumentItem, SymbolInformation, SymbolKind, Lo
 
 from jaclang.jac.passes import Pass
 from jaclang.jac.passes.blue import (
-    AstBuildPass,
     ImportPass,
     JacFormatPass,
     pass_schedule as blue_ps,
@@ -433,7 +433,7 @@ from jaclang.jac.transpiler import jac_file_to_pass
 
 
 def format_jac(doc_uri: str) -> str:
-    format_pass_schedule = [AstBuildPass, JacFormatPass]
+    format_pass_schedule = [JacFormatPass]
     doc_url = doc_uri.replace("file://", "")
     prse = jac_file_to_pass(
         doc_url, target=JacFormatPass, schedule=format_pass_schedule
@@ -619,7 +619,7 @@ def _get_architypes(ls: LanguageServer, doc_uri: str) -> dict[str, list]:
     """
     doc = ls.workspace.get_document(doc_uri)
     architype_prse = jac_file_to_pass(
-        file_path=doc.path, target=ArchitypePass, schedule=[AstBuildPass, ArchitypePass]
+        file_path=doc.path, target=ArchitypePass, schedule=[ArchitypePass]
     )
     doc.architypes = architype_prse.output
     return doc.architypes if doc.architypes else {}
@@ -632,7 +632,7 @@ def _get_architypes_from_jac_file(file_path: str) -> dict[str, list]:
     architype_prse = jac_file_to_pass(
         file_path=file_path,
         target=ArchitypePass,
-        schedule=[AstBuildPass, ArchitypePass],
+        schedule=[ArchitypePass],
     )
     return architype_prse.output
 
@@ -694,22 +694,22 @@ class ArchitypePass(Pass):
                         {
                             "type": "ability",
                             "name": node.name_ref.value,
-                            "line": node.line,
-                            "col_start": node.name_ref.col_start,
-                            "col_end": node.name_ref.col_end,
+                            "line": node.loc.first_line,
+                            "col_start": node.name_ref.loc.col_start,
+                            "col_end": node.name_ref.loc.col_end,
                         }
                     )
                 except Exception as e:
                     print(node.to_dict(), e)
             elif isinstance(node, ast.ArchHas):
-                for var in node.vars.kid:
+                for var in node.vars.items:
                     vars.append(
                         {
                             "type": "has_var",
                             "name": var.name.value,
-                            "line": var.line,
-                            "col_start": var.name.col_start,
-                            "col_end": var.name.col_end,
+                            "line": var.loc.first_line,
+                            "col_start": var.loc.col_start,
+                            "col_end": var.loc.col_end,
                         }
                     )
         return vars
@@ -717,9 +717,9 @@ class ArchitypePass(Pass):
     def enter_architype(self, node: ast.Architype):
         architype = {}
         architype["name"] = node.name.value
-        architype["line"] = node.name.line
-        architype["col_start"] = node.name.col_start
-        architype["col_end"] = node.name.col_end
+        architype["line"] = node.name.loc.first_line
+        architype["col_start"] = node.name.loc.col_start
+        architype["col_end"] = node.name.loc.col_end
 
         architype["vars"] = self.extract_vars(node.body.kid)
 
