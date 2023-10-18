@@ -420,6 +420,9 @@ def get_completion_items(
 # **********************************************************
 
 import os
+
+from pathlib import Path
+
 from lsprotocol.types import TextDocumentItem, SymbolInformation, SymbolKind, Location
 
 from jaclang.jac.passes import Pass
@@ -430,6 +433,7 @@ from jaclang.jac.passes.blue import (
 )
 import jaclang.jac.absyntree as ast
 from jaclang.jac.transpiler import jac_file_to_pass
+from jaclang.jac.workspace import Workspace
 
 
 def format_jac(doc_uri: str) -> str:
@@ -445,16 +449,10 @@ def fill_workspace(ls: LanguageServer):
     """
     Fill the workspace with all the JAC files
     """
-    jac_files = [
-        os.path.join(root, name)
-        for root, _, files in os.walk(ls.workspace.root_path)
-        for name in files
-        if name.endswith(".jac")
-    ]
-    for file_ in jac_files:
-        text = open(file_, "r").read()
+    ls.jlws = Workspace(path=ls.workspace.root_path)
+    for mod_path, mod_info in ls.jlws.modules.items():
         doc = TextDocumentItem(
-            uri=f"file://{file_}", language_id="jac", version=0, text=text
+            uri=f"file://{mod_path}", language_id="jac", version=0, text=mod_info.ir.source.code
         )
         ls.workspace.put_document(doc)
         doc = ls.workspace.get_document(doc.uri)
@@ -481,6 +479,7 @@ def update_doc_deps(ls: LanguageServer, doc_uri: str):
     doc_url = doc.uri.replace("file://", "")
     doc.dependencies = {}
     imports = _get_imports_from_jac_file(doc_url)
+    jlws_imports= ls.jlws.get_dependencies(doc_url) #TODO: Update this to make sense for use case
     ls.dep_table[doc_url] = [s for s in imports if s["is_jac_import"]]
     for dep in imports:
         if dep["is_jac_import"]:
@@ -499,9 +498,6 @@ def update_doc_deps(ls: LanguageServer, doc_uri: str):
             doc.dependencies.update(dependencies)
 
 
-from pathlib import Path
-
-
 def _get_imports_from_jac_file(file_path: str) -> list:
     """
     Return a list of imports in the document
@@ -511,13 +507,13 @@ def _get_imports_from_jac_file(file_path: str) -> list:
         file_path=file_path, target=ImportPass, schedule=blue_ps
     )
     if hasattr(import_prse.ir, "body"):
-        for i in import_prse.ir.body.elements:
+        for i in import_prse.ir.body:
             if isinstance(i, ast.Import):
                 imports.append(
                     {
                         "path": i.path.path_str.replace(".", os.sep),
-                        "is_jac_import": i.lang.value == "jac",
-                        "line": i.line,
+                        "is_jac_import": i.lang.tag.value == "jac",
+                        "line": i.loc.first_line,
                         "uri": f"file://{Path(file_path).parent.joinpath(i.path.path_str.replace('.', os.sep))}.jac",
                     }
                 )
