@@ -270,6 +270,7 @@ def validate(ls, params):
     doc_path = params.text_document.uri.replace("file://", "")
     diagnostics = _validate_jac(doc_path, source) if source else []
     ls.publish_diagnostics(text_doc.uri, diagnostics)
+    return diagnostics
 
 
 def _validate_jac(doc_path: str, source: str) -> list:
@@ -610,6 +611,10 @@ def get_doc_symbols(
                         container_name=element["name"],
                     )
                 )
+        for ref in ref_nodes:
+            ref_symbol = find_ref_symbol()
+            symbol = SymbolInformation()
+            symbol.ref = ref_symbol
     return symbols
 
 

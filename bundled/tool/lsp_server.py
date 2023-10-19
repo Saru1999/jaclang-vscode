@@ -84,6 +84,14 @@ def did_save(ls, params: lsp.DidSaveTextDocumentParams):
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DID_CLOSE)
 def did_close(ls, params: lsp.DidCloseTextDocumentParams):
+    """
+    Callback function for when a text document is closed in the language server.
+
+    :param ls: The language server instance.
+    :type ls: LanguageServer
+    :param params: The parameters for the text document that was closed.
+    :type params: lsp.DidCloseTextDocumentParams
+    """
     pass
 
 
@@ -271,9 +279,6 @@ def completions(params: Optional[lsp.CompletionParams] = None) -> lsp.Completion
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DEFINITION)
 def definition(ls, params: lsp.DefinitionParams):
-    """
-    TODO Things to happen on text document definition:
-    """
     pass
 
 
