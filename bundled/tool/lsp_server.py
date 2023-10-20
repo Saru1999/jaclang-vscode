@@ -44,7 +44,7 @@ GLOBAL_SETTINGS = {}
 
 MAX_WORKERS = 5
 LSP_SERVER = server.LanguageServer(
-    name="Jaseci", version="v0.0.1", max_workers=MAX_WORKERS
+    name="Jac", version="v0.0.1", max_workers=MAX_WORKERS
 )
 LSP_SERVER.workspace_filled = False
 LSP_SERVER.dep_table = {}
