@@ -65,4 +65,12 @@ To build the `.vsix` (VSCode Extension file)
 npm run vsce-package
 ```
 
+### Running Tests
+
+To run language server tests
+
+```bash
+pytest
+```
+
 Then you can install the extension on your VSCode using this https://code.visualstudio.com/docs/editor/extension-marketplace

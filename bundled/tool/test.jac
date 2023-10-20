@@ -7,6 +7,11 @@ import:py math;
 
 include:jac circle_impl;
 
+
+
+
+
+
 enum ShapeType;
 can calculate_area(radius: float) -> float;
 can main_run;
@@ -31,5 +36,5 @@ global RAD = 5, c = Circle(RAD);
 
 """Here we run the main program."""
 with entry {
-    main_run();
+    main_run();    
 }

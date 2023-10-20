@@ -28,8 +28,6 @@ class TestValidate(unittest.TestCase):
 
         ls_mock.workspace = MockWorkspace()
 
-        print(ls_mock.workspace)
-
         # Set up mock Params instance
         class MockTextDocument:
             def __init__(self, uri):

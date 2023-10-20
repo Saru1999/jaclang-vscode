@@ -611,10 +611,6 @@ def get_doc_symbols(
                         container_name=element["name"],
                     )
                 )
-        for ref in ref_nodes:
-            ref_symbol = find_ref_symbol()
-            symbol = SymbolInformation()
-            symbol.ref = ref_symbol
     return symbols
 
 

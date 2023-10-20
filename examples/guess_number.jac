@@ -20,7 +20,7 @@ def add_one(x:int):
 
 :node:turn:ability:check {
     guess = "Guess a number between 1 and 100: " |> input;
-    if |> guess.isdigit {
+    if |> guess.isdigit() {
         guess |> int |> <here>.process_guess;
     } else {
         "That's not a valid number! Try again." |> print;
@@ -34,7 +34,7 @@ def add_one(x:int):
     end = <here>;
     
     for i = 0 to i < 10 by i += 1 {
-        end ++> end := :> turn;
+        end ++> end := :> turn();
     }
     visit -->;    
 }
@@ -47,10 +47,10 @@ def add_one(x:int):
         "Too low!" |> print;
     } else {
         "Congratulations! You guessed correctly." |> print;
-        disengage;
+        disengage;;
     }    
 }
 
 with entry {
-    :> GuessGame :> <root>;    
+    :> GuessGame() :> <root>;
 }
