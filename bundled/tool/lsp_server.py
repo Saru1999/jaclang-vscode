@@ -209,30 +209,30 @@ async def did_open(ls, params: lsp.DidChangeNotebookCellParams):
 # Features
 
 
-# @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_FORMATTING)
-# def formatting(ls, params: lsp.DocumentFormattingParams):
-#     """
-#     TODO: Selective Formatting needs to be implemented
-#     Formats the document.
+@LSP_SERVER.feature(lsp.TEXT_DOCUMENT_FORMATTING)
+def formatting(ls, params: lsp.DocumentFormattingParams):
+    """
+    TODO: Selective Formatting needs to be implemented
+    Formats the document.
 
-#     :param ls: The language server instance.
-#     :type ls: lsp.LanguageServer
-#     :param params: The document formatting parameters.
-#     :type params: lsp.DocumentFormattingParams
-#     :return: A list of text edits to apply to the document.
-#     :rtype: List[lsp.TextEdit]
-#     """
-#     doc_uri = params.text_document.uri
-#     formatted_text = utils.format_jac(doc_uri)
-#     return [
-#         lsp.TextEdit(
-#             range=lsp.Range(
-#                 start=lsp.Position(line=0, character=0),
-#                 end=lsp.Position(line=len(formatted_text), character=0),
-#             ),
-#             new_text=formatted_text,
-#         )
-#     ]
+    :param ls: The language server instance.
+    :type ls: lsp.LanguageServer
+    :param params: The document formatting parameters.
+    :type params: lsp.DocumentFormattingParams
+    :return: A list of text edits to apply to the document.
+    :rtype: List[lsp.TextEdit]
+    """
+    doc_uri = params.text_document.uri
+    formatted_text = utils.format_jac(doc_uri)
+    return [
+        lsp.TextEdit(
+            range=lsp.Range(
+                start=lsp.Position(line=0, character=0),
+                end=lsp.Position(line=len(formatted_text), character=0),
+            ),
+            new_text=formatted_text,
+        )
+    ]
 
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_COMPLETION)
