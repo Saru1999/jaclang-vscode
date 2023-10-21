@@ -49,13 +49,6 @@ def _update_pip_packages(session: nox.Session) -> None:
         "--generate-hashes",
         "--resolver=backtracking",
         "--upgrade",
-        "./src/test/python_tests/requirements.in",
-    )
-    session.run(
-        "pip-compile",
-        "--generate-hashes",
-        "--resolver=backtracking",
-        "--upgrade",
         "./dev_requirements.in",
     )
 
@@ -126,42 +119,29 @@ def setup(session: nox.Session) -> None:
     _setup_template_environment(session)
 
 
-@nox.session()
+@nox.session(python="3.11")
 def tests(session: nox.Session) -> None:
     """Runs all the tests for the extension."""
-    session.install("-r", "src/test/python_tests/requirements.txt")
-    session.run("pytest", "--capture=no", "src/test/python_tests")
-
-    session.install("freezegun")
-    session.run("pytest", "build")
+    session.run("python -m pytest")
 
 
 @nox.session()
 def lint(session: nox.Session) -> None:
     """Runs linter and formatter checks on python files."""
     session.install("-r", "./requirements.txt")
-    session.install("-r", "src/test/python_tests/requirements.txt")
 
     session.install("flake8")
     session.run("flake8", "./bundled/tool")
-    session.run(
-        "flake8",
-        "--extend-exclude",
-        "./src/test/python_tests/test_data",
-        "./src/test/python_tests",
-    )
     session.run("flake8", "noxfile.py")
 
     # check formatting using black
     session.install("black")
     session.run("black", "--check", "./bundled/tool")
-    session.run("black", "--check", "./src/test/python_tests")
     session.run("black", "--check", "noxfile.py")
 
     # check import sorting using isort
     session.install("isort")
     session.run("isort", "--check", "--profile", "black", "./bundled/tool")
-    session.run("isort", "--check", "--profile", "black", "./src/test/python_tests")
     session.run("isort", "--check", "--profile", "black", "noxfile.py")
 
     # check typescript code

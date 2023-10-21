@@ -96,7 +96,7 @@ def did_close(ls, params: lsp.DidCloseTextDocumentParams):
 
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DID_OPEN)
-async def did_open(ls, params: lsp.DidOpenTextDocumentParams):
+def did_open(ls, params: lsp.DidOpenTextDocumentParams):
     """
     This function is called when a text document is opened in the client.
     It fills the workspace if it is not already filled and validates the parameters.
@@ -374,6 +374,8 @@ def initialize(params: lsp.InitializeParams) -> None:
     setting = _get_settings_by_path(pathlib.Path(os.getcwd()))
     for extra in setting.get("extraPaths", []):
         update_sys_path(extra, import_strategy)
+
+    utils.fill_workspace(LSP_SERVER)
 
 
 # *****************************************************

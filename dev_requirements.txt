@@ -28,6 +28,10 @@ filelock==3.12.4 \
     --hash=sha256:08c21d87ded6e2b9da6728c3dff51baf1dcecf973b768ef35bcbc3447edb9ad4 \
     --hash=sha256:2e6f249f1f3654291606e046b09f1fd5eac39b360664c27f5aad072012f8bcbd
     # via virtualenv
+jaclang==0.1.0 \
+    --hash=sha256:aebe1fb77da1555dcc6382d7319bbc9d0bc3197ec9508561c6429a8dec5d7873 \
+    --hash=sha256:f15983ad9269d7024f10aa7c7fcfa5bd8e7ba4ed1ef0b6cf98cb1b90b370e97f
+    # via -r ./dev_requirements.in
 nox==2023.4.22 \
     --hash=sha256:0b1adc619c58ab4fa57d6ab2e7823fe47a32e70202f287d78474adcc7bda1891 \
     --hash=sha256:46c0560b0dc609d7d967dc99e22cb463d3c4caf54a5fda735d6c11b5177e3a9f

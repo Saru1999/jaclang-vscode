@@ -14,7 +14,7 @@ can main_run;
 """Base class for a shape."""
 object Shape {
     has shape_type: ShapeType;
-    
+
     can area-> float abstract;
 }
 
@@ -22,7 +22,7 @@ object Shape {
 """Circle class inherits from Shape."""
 object Circle:Shape {
     has radius: float;
-    
+
     can <init>;
     can area-> float;
 }
