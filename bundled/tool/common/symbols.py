@@ -1,43 +1,14 @@
-# Copyright (c) Jaseci Labs. All rights reserved.
-# Licensed under the MIT License.
-
 import os
-from typing import List, Optional
-import lsprotocol.types as lsp
-from common.utils import normalize_path
-
-
-# **********************************************************
-# Jaseci Validation
-# **********************************************************
-
-from common.validation import validate
-
-# **********************************************************
-# Jaseci Completion
-# **********************************************************
-
-from common.completion import get_completion_items
-
-
-# **********************************************************
-# Jaseci Symbols
-# **********************************************************
-
-import os
+from pathlib import Path
+from typing import List
 
 from lsprotocol.types import Position, Range
-
 from pygls.server import LanguageServer
-
-from pathlib import Path
-
 from lsprotocol.types import TextDocumentItem, SymbolInformation, SymbolKind, Location
 
 from jaclang.jac.passes import Pass
 from jaclang.jac.passes.blue import (
     ImportPass,
-    JacFormatPass,
     pass_schedule as blue_ps,
 )
 import jaclang.jac.absyntree as ast
@@ -45,18 +16,15 @@ from jaclang.jac.transpiler import jac_file_to_pass
 from jaclang.jac.workspace import Workspace
 
 
-def format_jac(doc_uri: str) -> str:
-    format_pass_schedule = [JacFormatPass]
-    doc_url = doc_uri.replace("file://", "")
-    prse = jac_file_to_pass(
-        doc_url, target=JacFormatPass, schedule=format_pass_schedule
-    )
-    return prse.ir.meta["jac_code"]
-
-
-def fill_workspace(ls: LanguageServer):
+def fill_workspace(ls: LanguageServer) -> None:
     """
-    Fill the workspace with all the JAC files
+    Fills the workspace with the modules and their dependencies.
+
+    Args:
+        ls (LanguageServer): The LanguageServer instance.
+
+    Returns:
+        None
     """
     ls.jlws = Workspace(path=ls.workspace.root_path)
     for mod_path, mod_info in ls.jlws.modules.items():
@@ -74,18 +42,32 @@ def fill_workspace(ls: LanguageServer):
     ls.workspace_filled = True
 
 
-def update_doc_tree(ls: LanguageServer, doc_uri: str):
+def update_doc_tree(ls: LanguageServer, doc_uri: str) -> None:
     """
-    Update the tree of a document and its symbols
+    Updates the document tree with the symbols in the given document URI.
+
+    Args:
+        ls (LanguageServer): The language server instance.
+        doc_uri (str): The URI of the document to update.
+
+    Returns:
+        None
     """
     doc = ls.workspace.get_document(doc_uri)
     doc.symbols = [s for s in get_doc_symbols(ls, doc.uri) if s.location.uri == doc.uri]
     update_doc_deps(ls, doc.uri)
 
 
-def update_doc_deps(ls: LanguageServer, doc_uri: str):
+def update_doc_deps(ls: LanguageServer, doc_uri: str) -> None:
     """
-    Update the dependencies of a document
+    Update the dependencies of a document in the given LanguageServer instance.
+
+    Args:
+        ls (LanguageServer): The LanguageServer instance to use.
+        doc_uri (str): The URI of the document to update.
+
+    Returns:
+        None
     """
     doc = ls.workspace.get_document(doc_uri)
     doc_url = doc.uri.replace("file://", "")
@@ -119,7 +101,17 @@ def update_doc_deps(ls: LanguageServer, doc_uri: str):
 
 def _get_imports_from_jac_file(file_path: str) -> list:
     """
-    Return a list of imports in the document
+    Given a file path to a Jaseci Abstract Code (JAC) file, returns a list of
+    dictionaries representing the imports in the file. Each dictionary contains
+    the path to the imported module, a boolean indicating whether the import is a
+    JAC import, the line number of the import statement, and the URI of the imported
+    module.
+
+    Args:
+        file_path (str): The path to the JAC file.
+
+    Returns:
+        list: A list of dictionaries representing the imports in the file.
     """
     imports = []
     import_prse = jac_file_to_pass(
@@ -139,34 +131,32 @@ def _get_imports_from_jac_file(file_path: str) -> list:
     return imports
 
 
-def get_symbol_data(ls: LanguageServer, uri: str, name: str, architype: str):
+def get_symbol_data(
+    ls: LanguageServer, uri: str, name: str, architype: str
+) -> SymbolInformation | None:
     """
-    Return the data of a symbol
+    Retrieves symbol information for a given symbol name and archetype from a document.
+
+    Args:
+        ls (LanguageServer): The language server instance.
+        uri (str): The URI of the document to retrieve symbol information from.
+        name (str): The name of the symbol to retrieve information for.
+        architype (str): The archetype of the symbol to retrieve information for.
+
+    Returns:
+        SymbolInformation | None: The symbol information if found, else None.
     """
     doc = ls.workspace.get_document(uri)
     if not hasattr(doc, "symbols"):
         doc.symbols = get_doc_symbols(ls, doc.uri)
 
     symbols_pool = doc.symbols
-    # TODO: Extend the symbols pool to include symbols from dependencies
 
     for symbol in symbols_pool:
         if symbol.name == name and symbol.kind == _get_symbol_kind(architype):
             return symbol
     else:
         return None
-
-
-def is_contained(sym_location: lsp.Location, hover_position: lsp.Position) -> bool:
-    """
-    Returns True if the hover position is contained within the symbol location.
-    """
-    return (
-        sym_location.range.start.line <= hover_position.line
-        and sym_location.range.end.line >= hover_position.line
-        and sym_location.range.start.character <= hover_position.character
-        and sym_location.range.end.character >= hover_position.character
-    )
 
 
 def get_doc_symbols(
@@ -176,8 +166,25 @@ def get_doc_symbols(
     shift_lines: int = 0,
 ) -> List[SymbolInformation]:
     """
-    Return a list of symbols in the document
+    Returns a list of SymbolInformation objects representing the symbols defined in the given document.
+
+    Parameters:
+    ls (LanguageServer): The LanguageServer instance to use.
+    doc_uri (str): The URI of the document to analyze.
+    architypes (dict[str, list], optional): A dictionary mapping archetype names to lists of elements of that archetype. If not provided, it will be computed automatically. Defaults to None.
+    shift_lines (int, optional): The number of lines to shift the symbol positions by. Defaults to 0.
+
+    Returns:
+    List[SymbolInformation]: A list of SymbolInformation objects representing the symbols defined in the document.
     """
+
+
+def get_doc_symbols(
+    ls: LanguageServer,
+    doc_uri: str,
+    architypes: dict[str, list] = None,
+    shift_lines: int = 0,
+) -> List[SymbolInformation]:
     if architypes is None:
         architypes = _get_architypes(ls, doc_uri)
 
@@ -230,7 +237,14 @@ def get_doc_symbols(
 
 def _get_architypes(ls: LanguageServer, doc_uri: str) -> dict[str, list]:
     """
-    Return a dictionary of architypes in the document including their elements
+    Retrieves the architypes for a given document URI.
+
+    Args:
+        ls (LanguageServer): The LanguageServer instance.
+        doc_uri (str): The URI of the document.
+
+    Returns:
+        dict[str, list]: A dictionary containing the architypes for the document.
     """
     doc = ls.workspace.get_document(doc_uri)
     architype_prse = jac_file_to_pass(
@@ -242,7 +256,12 @@ def _get_architypes(ls: LanguageServer, doc_uri: str) -> dict[str, list]:
 
 def _get_architypes_from_jac_file(file_path: str) -> dict[str, list]:
     """
-    Return a dictionary of architypes in the document including their elements
+    Return a dictionary of archetypes in the document including their elements
+
+    :param file_path: The path to the JAC file to parse
+    :type file_path: str
+    :return: A dictionary of archetypes in the document including their elements
+    :rtype: dict[str, list]
     """
     architype_prse = jac_file_to_pass(
         file_path=file_path,
@@ -252,38 +271,25 @@ def _get_architypes_from_jac_file(file_path: str) -> dict[str, list]:
     return architype_prse.output
 
 
-def get_symbol_at_position(doc, position: Position):
-    """
-    Return the symbol at a position
-    """
-    symbols = doc.symbols
-    for symbol in symbols:
-        if (
-            symbol.location.range.start.line <= position.line
-            and symbol.location.range.end.line >= position.line
-        ):
-            return symbol
-    return None
-
-
 def _get_symbol_kind(architype: str) -> SymbolKind:
     """
     Return the symbol kind of an architype
+
+    Parameters:
+    architype (str): The archetype of the symbol
+
+    Returns:
+    SymbolKind: The kind of symbol that corresponds to the archetype
     """
-    if architype == "walker":
-        return SymbolKind.Class
-    elif architype == "node":
-        return SymbolKind.Class
-    elif architype == "edge":
-        return SymbolKind.Interface
-    elif architype == "graph":
-        return SymbolKind.Namespace
-    elif architype == "ability":
-        return SymbolKind.Method
-    elif architype == "object":
-        return SymbolKind.Object
-    else:
-        return SymbolKind.Variable
+    architype_map = {
+        "walker": SymbolKind.Class,
+        "node": SymbolKind.Class,
+        "edge": SymbolKind.Interface,
+        "graph": SymbolKind.Namespace,
+        "ability": SymbolKind.Method,
+        "object": SymbolKind.Object,
+    }
+    return architype_map.get(architype, SymbolKind.Variable)
 
 
 class ArchitypePass(Pass):
@@ -301,6 +307,15 @@ class ArchitypePass(Pass):
     }
 
     def extract_vars(self, nodes: List[ast.AstNode]):
+        """
+        Extracts variables from a list of AST nodes.
+
+        Args:
+            nodes (List[ast.AstNode]): A list of AST nodes.
+
+        Returns:
+            List[Dict[str, Union[str, int]]]: A list of dictionaries containing information about each variable.
+        """
         vars = []
         for node in nodes:
             if isinstance(node, ast.Ability):
@@ -339,3 +354,24 @@ class ArchitypePass(Pass):
         architype["vars"] = self.extract_vars(node.body.kid)
 
         self.output[self.output_key_map[node.arch_type.name]].append(architype)
+
+
+def get_symbol_at_position(doc, position: Position):
+    """
+    Return the symbol at a given position in the document.
+
+    Args:
+        doc (Document): The document to search for symbols.
+        position (Position): The position to search for a symbol.
+
+    Returns:
+        Symbol: The symbol at the given position, or None if no symbol is found.
+    """
+    symbols = doc.symbols
+    for symbol in symbols:
+        if (
+            symbol.location.range.start.line <= position.line
+            and symbol.location.range.end.line >= position.line
+        ):
+            return symbol
+    return None

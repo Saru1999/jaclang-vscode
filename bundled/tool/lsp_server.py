@@ -1,7 +1,5 @@
 # Copyright (c) Jaseci Labs. All rights reserved.
 # Licensed under the MIT License.
-"""Implementation of tool support over LSP."""
-from __future__ import annotations
 
 import json
 import os
@@ -9,51 +7,51 @@ import pathlib
 import sys
 from typing import Optional
 
-
-# **********************************************************
-# Update sys.path before importing any bundled libraries.
-# **********************************************************
-def update_sys_path(path_to_add: str, strategy: str) -> None:
-    """Add given path to `sys.path`."""
-    if path_to_add not in sys.path and os.path.isdir(path_to_add):
-        if strategy == "useBundled":
-            sys.path.insert(0, path_to_add)
-        else:
-            sys.path.append(path_to_add)
+from common.utils import normalize_path, update_sys_path
 
 
 # Ensure that we can import LSP libraries, and other bundled libraries.
 BUNDLE_DIR = pathlib.Path(__file__).parent.parent
 BUNDLED_LIBS = os.fspath(BUNDLE_DIR / "libs")
-# Always use bundled server files.
 update_sys_path(os.fspath(BUNDLE_DIR / "tool"), "useBundled")
 update_sys_path(
     BUNDLED_LIBS,
     os.getenv("LS_IMPORT_STRATEGY", "useBundled"),
 )
 
-# **********************************************************
-# Imports needed for the language server goes below this.
-# **********************************************************
-import lsp_utils as utils
 import lsprotocol.types as lsp
 from pygls import server, uris
+
+
+from common.validation import validate
+from common.completion import get_completion_items
+from common.format import format_jac
+from common.symbols import (
+    fill_workspace,
+    update_doc_tree,
+    get_doc_symbols,
+)
+from common.hover import is_contained
+
+
+class JacLanguageServer(server.LanguageServer):
+    def __init__(self, name, version, max_workers):
+        super().__init__(name=name, version=version, max_workers=max_workers)
+        self.workspace_filled = False
+        self.dep_table = {}
+
 
 WORKSPACE_SETTINGS = {}
 GLOBAL_SETTINGS = {}
 
 MAX_WORKERS = 5
-LSP_SERVER = server.LanguageServer(
-    name="Jac", version="v0.0.1", max_workers=MAX_WORKERS
+LSP_SERVER = JacLanguageServer(
+    name="Jaclang Language Server",
+    version="0.0.1",
+    max_workers=MAX_WORKERS,
 )
-LSP_SERVER.workspace_filled = False
-LSP_SERVER.dep_table = {}
 
-# **********************************************************
-# Language Server features
-# **********************************************************
-
-# Handle Document Operations
+# ************** Language Server features ********************
 
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DID_CHANGE)
@@ -65,8 +63,8 @@ def did_change(ls, params: lsp.DidChangeTextDocumentParams):
         ls (LanguageServer): The language server instance.
         params (lsp.DidChangeTextDocumentParams): The parameters for the text document change.
     """
-    utils.update_doc_tree(ls, params.text_document.uri)
-    utils.validate(ls, params)
+    update_doc_tree(ls, params.text_document.uri)
+    validate(ls, params)
 
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DID_SAVE)
@@ -78,8 +76,8 @@ def did_save(ls, params: lsp.DidSaveTextDocumentParams):
         ls (LanguageServer): The language server instance.
         params (lsp.DidSaveTextDocumentParams): The parameters for the saved text document.
     """
-    utils.update_doc_tree(ls, params.text_document.uri)
-    utils.validate(ls, params)
+    update_doc_tree(ls, params.text_document.uri)
+    validate(ls, params)
 
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DID_CLOSE)
@@ -102,8 +100,8 @@ def did_open(ls, params: lsp.DidOpenTextDocumentParams):
     It fills the workspace if it is not already filled and validates the parameters.
     """
     if not ls.workspace_filled:
-        utils.fill_workspace(ls)
-    utils.validate(ls, params)
+        fill_workspace(ls)
+    validate(ls, params)
 
 
 # Handle File Operations
@@ -124,7 +122,7 @@ def did_create_files(ls: server.LanguageServer, params: lsp.CreateFilesParams):
         params (lsp.CreateFilesParams): The parameters for the file creation.
     """
     ls.workspace_filled = False
-    utils.fill_workspace(ls)
+    fill_workspace(ls)
 
 
 @LSP_SERVER.feature(
@@ -160,7 +158,7 @@ def did_rename_files(ls: server.LanguageServer, params: lsp.RenameFilesParams):
                         log_to_output("Accepted")
     ls.workspace.remove_text_document(old_uri)
     del ls.dep_table[old_uri.replace("file://", "")]
-    utils.fill_workspace(ls)
+    fill_workspace(ls)
 
 
 @LSP_SERVER.feature(
@@ -188,7 +186,7 @@ def did_delete_files(ls: server.LanguageServer, params: lsp.DeleteFilesParams):
                         )
                         del ls.dep_table[doc]
     ls.workspace_filled = False
-    utils.fill_workspace(ls)
+    fill_workspace(ls)
 
 
 # Notebook Support
@@ -210,7 +208,7 @@ async def did_open(ls, params: lsp.DidSaveNotebookDocumentParams):
 
 
 @LSP_SERVER.feature(lsp.NOTEBOOK_DOCUMENT_DID_CHANGE)
-async def did_open(ls, params: lsp.DidChangeNotebookCellParams):
+async def did_open(ls, params: lsp.DidChangeNotebookDocumentParams):
     pass
 
 
@@ -231,7 +229,7 @@ def formatting(ls, params: lsp.DocumentFormattingParams):
     :rtype: List[lsp.TextEdit]
     """
     doc_uri = params.text_document.uri
-    formatted_text = utils.format_jac(doc_uri)
+    formatted_text = format_jac(doc_uri)
     return [
         lsp.TextEdit(
             range=lsp.Range(
@@ -254,7 +252,7 @@ def completions(params: Optional[lsp.CompletionParams] = None) -> lsp.Completion
     :return: A list of completion items.
     :rtype: lsp.CompletionList
     """
-    completion_items = utils.get_completion_items(LSP_SERVER, params)
+    completion_items = get_completion_items(LSP_SERVER, params)
     return lsp.CompletionList(is_incomplete=False, items=completion_items)
 
 
@@ -304,7 +302,7 @@ def hover(ls, params: lsp.HoverParams):
     # Find the symbol at the specified position
     symbol = None
     for s in lsp_document.symbols:
-        if utils.is_contained(s.location, position):
+        if is_contained(s.location, position):
             symbol = s
             break
 
@@ -331,7 +329,7 @@ def workspace_symbol(ls, params: lsp.WorkspaceSymbolParams):
         if hasattr(doc, "symbols"):
             symbols.extend(doc.symbols)
         else:
-            doc.symbols = utils.get_doc_symbols(ls, doc.uri)
+            doc.symbols = get_doc_symbols(ls, doc.uri)
             symbols.extend(doc.symbols)
     return symbols
 
@@ -342,8 +340,8 @@ def document_symbol(ls, params: lsp.DocumentSymbolParams):
     uri = params.text_document.uri
     doc = ls.workspace.get_document(uri)
     if not hasattr(doc, "symbols"):
-        utils.update_doc_tree(ls, doc.uri)
-        doc_symbols = utils.get_doc_symbols(ls, doc.uri)
+        update_doc_tree(ls, doc.uri)
+        doc_symbols = get_doc_symbols(ls, doc.uri)
         return [s for s in doc_symbols if s.location.uri == doc.uri]
     else:
         return [s for s in doc.symbols if s.location.uri == doc.uri]
@@ -375,7 +373,7 @@ def initialize(params: lsp.InitializeParams) -> None:
     for extra in setting.get("extraPaths", []):
         update_sys_path(extra, import_strategy)
 
-    utils.fill_workspace(LSP_SERVER)
+    fill_workspace(LSP_SERVER)
 
 
 # *****************************************************
@@ -402,7 +400,7 @@ def _get_global_defaults():
 
 def _update_workspace_settings(settings):
     if not settings:
-        key = utils.normalize_path(os.getcwd())
+        key = normalize_path(os.getcwd())
         WORKSPACE_SETTINGS[key] = {
             "cwd": key,
             "workspaceFS": key,
@@ -412,7 +410,7 @@ def _update_workspace_settings(settings):
         return
 
     for setting in settings:
-        key = utils.normalize_path(uris.to_fs_path(setting["workspace"]))
+        key = normalize_path(uris.to_fs_path(setting["workspace"]))
         WORKSPACE_SETTINGS[key] = {
             **setting,
             "workspaceFS": key,
@@ -423,7 +421,7 @@ def _get_settings_by_path(file_path: pathlib.Path):
     workspaces = {s["workspaceFS"] for s in WORKSPACE_SETTINGS.values()}
 
     while file_path != file_path.parent:
-        str_file_path = utils.normalize_path(file_path)
+        str_file_path = normalize_path(file_path)
         if str_file_path in workspaces:
             return WORKSPACE_SETTINGS[str_file_path]
         file_path = file_path.parent

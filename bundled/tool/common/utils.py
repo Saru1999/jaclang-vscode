@@ -67,3 +67,21 @@ def is_stdlib_file(file_path: str) -> bool:
     """Return True if the file belongs to the standard library."""
     normalized_path = str(pathlib.Path(file_path).resolve())
     return any(normalized_path.startswith(path) for path in _stdlib_paths)
+
+
+def update_sys_path(path_to_add: str, strategy: str) -> None:
+    """
+    Add a given path to `sys.path`.
+
+    Args:
+        path_to_add (str): The path to add to `sys.path`.
+        strategy (str): The strategy to use when adding the path. If "useBundled", the path will be added to the beginning of `sys.path`. Otherwise, it will be added to the end.
+
+    Returns:
+        None
+    """
+    if path_to_add not in sys.path and os.path.isdir(path_to_add):
+        if strategy == "useBundled":
+            sys.path.insert(0, path_to_add)
+        else:
+            sys.path.append(path_to_add)
