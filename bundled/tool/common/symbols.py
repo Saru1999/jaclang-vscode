@@ -7,10 +7,6 @@ from pygls.server import LanguageServer
 from lsprotocol.types import TextDocumentItem, SymbolInformation, SymbolKind, Location
 
 from jaclang.jac.passes import Pass
-from jaclang.jac.passes.blue import (
-    ImportPass,
-    pass_schedule as blue_ps,
-)
 import jaclang.jac.absyntree as ast
 from jaclang.jac.transpiler import jac_file_to_pass
 from jaclang.jac.workspace import Workspace
@@ -35,7 +31,6 @@ def fill_workspace(ls: LanguageServer) -> None:
             text=mod_info.ir.source.code,
         )
         ls.workspace.put_document(doc)
-        doc = ls.workspace.get_document(doc.uri)
         update_doc_tree(ls, doc.uri)
     for doc in ls.workspace.documents.values():
         update_doc_deps(ls, doc.uri)
@@ -72,11 +67,17 @@ def update_doc_deps(ls: LanguageServer, doc_uri: str) -> None:
     doc = ls.workspace.get_document(doc_uri)
     doc_url = doc.uri.replace("file://", "")
     doc.dependencies = {}
-    imports = _get_imports_from_jac_file(doc_url)
-    try:
-        jlws_imports = ls.jlws.get_dependencies(doc_url)
-    except:
-        jlws_imports = []
+
+    jlws_imports = ls.jlws.get_dependencies(doc_url)
+    imports = [
+        {
+            "path": i.path.path_str.replace(".", os.sep),
+            "is_jac_import": i.lang.tag.value == "jac",
+            "line": i.loc.first_line,
+            "uri": f"file://{Path(doc_url).parent.joinpath(i.path.path_str.replace('.', os.sep))}.jac",
+        }
+        for i in jlws_imports
+    ]
 
     ls.dep_table[doc_url] = [s for s in imports if s["is_jac_import"]]
     for dep in imports:
@@ -85,50 +86,18 @@ def update_doc_deps(ls: LanguageServer, doc_uri: str) -> None:
                 f"{os.path.join(os.path.dirname(doc_url), dep['path'])}.jac"
             )
             architypes = _get_architypes_from_jac_file(import_file_path)
-            new_symbols = get_doc_symbols(
+            dep_symbols = get_doc_symbols(
                 ls,
                 f"file://{import_file_path}",
                 architypes=architypes,
             )
             dependencies = {
-                dep["path"]: {"architypes": architypes, "symbols": new_symbols}
+                dep["path"]: {"architypes": architypes, "symbols": dep_symbols}
             }
             doc.dependencies.update(dependencies)
         else:
             # TODO: Add support for python file imports
             pass
-
-
-def _get_imports_from_jac_file(file_path: str) -> list:
-    """
-    Given a file path to a Jaseci Abstract Code (JAC) file, returns a list of
-    dictionaries representing the imports in the file. Each dictionary contains
-    the path to the imported module, a boolean indicating whether the import is a
-    JAC import, the line number of the import statement, and the URI of the imported
-    module.
-
-    Args:
-        file_path (str): The path to the JAC file.
-
-    Returns:
-        list: A list of dictionaries representing the imports in the file.
-    """
-    imports = []
-    import_prse = jac_file_to_pass(
-        file_path=file_path, target=ImportPass, schedule=blue_ps
-    )
-    if hasattr(import_prse.ir, "body"):
-        for i in import_prse.ir.body:
-            if isinstance(i, ast.Import):
-                imports.append(
-                    {
-                        "path": i.path.path_str.replace(".", os.sep),
-                        "is_jac_import": i.lang.tag.value == "jac",
-                        "line": i.loc.first_line,
-                        "uri": f"file://{Path(file_path).parent.joinpath(i.path.path_str.replace('.', os.sep))}.jac",
-                    }
-                )
-    return imports
 
 
 def get_symbol_data(
@@ -177,14 +146,6 @@ def get_doc_symbols(
     Returns:
     List[SymbolInformation]: A list of SymbolInformation objects representing the symbols defined in the document.
     """
-
-
-def get_doc_symbols(
-    ls: LanguageServer,
-    doc_uri: str,
-    architypes: dict[str, list] = None,
-    shift_lines: int = 0,
-) -> List[SymbolInformation]:
     if architypes is None:
         architypes = _get_architypes(ls, doc_uri)
 

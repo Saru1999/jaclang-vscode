@@ -338,7 +338,7 @@ def workspace_symbol(ls, params: lsp.WorkspaceSymbolParams):
 def document_symbol(ls, params: lsp.DocumentSymbolParams):
     """Document symbols."""
     uri = params.text_document.uri
-    doc = ls.workspace.get_document(uri)
+    doc = ls.workspace.get_text_document(uri)
     if not hasattr(doc, "symbols"):
         update_doc_tree(ls, doc.uri)
         doc_symbols = get_doc_symbols(ls, doc.uri)
