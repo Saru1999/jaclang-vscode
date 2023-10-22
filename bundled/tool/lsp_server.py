@@ -31,7 +31,7 @@ from common.symbols import (
     update_doc_tree,
     get_doc_symbols,
 )
-from common.hover import is_contained
+from common.hover import get_symbol_at_pos
 
 
 class JacLanguageServer(server.LanguageServer):
@@ -300,11 +300,7 @@ def hover(ls, params: lsp.HoverParams):
         return None
 
     # Find the symbol at the specified position
-    symbol = None
-    for s in lsp_document.symbols:
-        if is_contained(s.location, position):
-            symbol = s
-            break
+    symbol = get_symbol_at_pos(lsp_document, position)
 
     # Create a new Hover object with information about the symbol and return it
     if symbol is not None:
@@ -315,7 +311,11 @@ def hover(ls, params: lsp.HoverParams):
             range=symbol.location.range,
         )
 
-    return None
+    return lsp.Hover(
+        contents=lsp.MarkupContent(
+            kind=lsp.MarkupKind.PlainText, value="Symbol not found"
+        )
+    )
 
 
 # Symbol Handling

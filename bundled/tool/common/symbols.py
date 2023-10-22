@@ -85,15 +85,11 @@ def update_doc_deps(ls: LanguageServer, doc_uri: str) -> None:
             import_file_path = (
                 f"{os.path.join(os.path.dirname(doc_url), dep['path'])}.jac"
             )
-            architypes = _get_architypes_from_jac_file(import_file_path)
             dep_symbols = get_doc_symbols(
                 ls,
                 f"file://{import_file_path}",
-                architypes=architypes,
             )
-            dependencies = {
-                dep["path"]: {"architypes": architypes, "symbols": dep_symbols}
-            }
+            dependencies = {dep["path"]: {"symbols": dep_symbols}}
             doc.dependencies.update(dependencies)
         else:
             # TODO: Add support for python file imports
@@ -128,12 +124,7 @@ def get_symbol_data(
         return None
 
 
-def get_doc_symbols(
-    ls: LanguageServer,
-    doc_uri: str,
-    architypes: dict[str, list] = None,
-    shift_lines: int = 0,
-) -> List[SymbolInformation]:
+def get_doc_symbols(ls: LanguageServer, doc_uri: str) -> List[SymbolInformation]:
     """
     Returns a list of SymbolInformation objects representing the symbols defined in the given document.
 
@@ -146,90 +137,62 @@ def get_doc_symbols(
     Returns:
     List[SymbolInformation]: A list of SymbolInformation objects representing the symbols defined in the document.
     """
-    if architypes is None:
-        architypes = _get_architypes(ls, doc_uri)
-
     symbols: List[SymbolInformation] = []
 
-    for architype in architypes.keys():
-        for element in architypes[architype]:
+    doc_url = doc_uri.replace("file://", "")
+    jl_symbols = ls.jlws.get_symbols(doc_url)
+
+    for symbol in jl_symbols:
+        try:
             symbols.append(
                 SymbolInformation(
-                    name=element["name"],
-                    kind=_get_symbol_kind(architype),
+                    name=symbol.name,
+                    kind=_get_symbol_kind(symbol.sym_type.value),
                     location=Location(
                         uri=doc_uri,
                         range=Range(
                             start=Position(
-                                line=(element["line"] - 1) + shift_lines,
-                                character=element["col_start"],
+                                line=symbol.decl.loc.first_line - 1,
+                                character=symbol.decl.loc.col_start,
                             ),
                             end=Position(
-                                line=(element["line"] - 1) + shift_lines,
-                                character=element["col_end"],
+                                line=symbol.decl.loc.last_line - 1,
+                                character=symbol.decl.loc.col_end,
                             ),
                         ),
                     ),
                 )
             )
-            for var in element["vars"]:
-                symbols.append(
-                    SymbolInformation(
-                        name=var["name"],
-                        kind=_get_symbol_kind(var["type"]),
-                        location=Location(
-                            uri=doc_uri,
-                            range=Range(
-                                start=Position(
-                                    line=var["line"] - 1 + shift_lines,
-                                    character=var["col_start"],
+            if hasattr(symbol.decl, "body"):
+                for var in symbol.decl.body.kid:
+                    if not isinstance(var, (ast.Ability, ast.ArchHas)):
+                        continue
+                    try:
+                        symbols.append(
+                            SymbolInformation(
+                                name=var.py_resolve_name(),
+                                kind=_get_symbol_kind(str(type(var))),
+                                location=Location(
+                                    uri=doc_uri,
+                                    range=Range(
+                                        start=Position(
+                                            line=var.loc.first_line - 1,
+                                            character=var.loc.col_start,
+                                        ),
+                                        end=Position(
+                                            line=var.loc.last_line - 1,
+                                            character=var.loc.col_end,
+                                        ),
+                                    ),
                                 ),
-                                end=Position(
-                                    line=var["line"] + shift_lines,
-                                    character=var["col_end"],
-                                ),
-                            ),
-                        ),
-                        container_name=element["name"],
-                    )
-                )
+                                container_name=symbol.name,
+                            )
+                        )
+                    except Exception as e:
+                        print(e)
+        except Exception as e:
+            print(e)
     return symbols
-
-
-def _get_architypes(ls: LanguageServer, doc_uri: str) -> dict[str, list]:
-    """
-    Retrieves the architypes for a given document URI.
-
-    Args:
-        ls (LanguageServer): The LanguageServer instance.
-        doc_uri (str): The URI of the document.
-
-    Returns:
-        dict[str, list]: A dictionary containing the architypes for the document.
-    """
-    doc = ls.workspace.get_document(doc_uri)
-    architype_prse = jac_file_to_pass(
-        file_path=doc.path, target=ArchitypePass, schedule=[ArchitypePass]
-    )
-    doc.architypes = architype_prse.output
-    return doc.architypes if doc.architypes else {}
-
-
-def _get_architypes_from_jac_file(file_path: str) -> dict[str, list]:
-    """
-    Return a dictionary of archetypes in the document including their elements
-
-    :param file_path: The path to the JAC file to parse
-    :type file_path: str
-    :return: A dictionary of archetypes in the document including their elements
-    :rtype: dict[str, list]
-    """
-    architype_prse = jac_file_to_pass(
-        file_path=file_path,
-        target=ArchitypePass,
-        schedule=[ArchitypePass],
-    )
-    return architype_prse.output
 
 
 def _get_symbol_kind(architype: str) -> SymbolKind:
@@ -243,96 +206,15 @@ def _get_symbol_kind(architype: str) -> SymbolKind:
     SymbolKind: The kind of symbol that corresponds to the archetype
     """
     architype_map = {
-        "walker": SymbolKind.Class,
+        "mod": SymbolKind.Module,
+        "ability": SymbolKind.Method,
+        "var": SymbolKind.Variable,
+        "object": SymbolKind.Object,
         "node": SymbolKind.Class,
         "edge": SymbolKind.Interface,
-        "graph": SymbolKind.Namespace,
-        "ability": SymbolKind.Method,
-        "object": SymbolKind.Object,
+        "walker": SymbolKind.Class,
+        "enum": SymbolKind.Enum,
+        "impl": SymbolKind.Method,
+        "field": SymbolKind.Field,
     }
     return architype_map.get(architype, SymbolKind.Variable)
-
-
-class ArchitypePass(Pass):
-    """
-    A pass that extracts architypes from a JAC file
-    """
-
-    output = {"walker": [], "node": [], "edge": [], "graph": [], "object": []}
-    output_key_map = {
-        "KW_NODE": "node",
-        "KW_WALKER": "walker",
-        "KW_EDGE": "edge",
-        "KW_GRAPH": "graph",
-        "KW_OBJECT": "object",
-    }
-
-    def extract_vars(self, nodes: List[ast.AstNode]):
-        """
-        Extracts variables from a list of AST nodes.
-
-        Args:
-            nodes (List[ast.AstNode]): A list of AST nodes.
-
-        Returns:
-            List[Dict[str, Union[str, int]]]: A list of dictionaries containing information about each variable.
-        """
-        vars = []
-        for node in nodes:
-            if isinstance(node, ast.Ability):
-                try:
-                    vars.append(
-                        {
-                            "type": "ability",
-                            "name": node.name_ref.value,
-                            "line": node.loc.first_line,
-                            "col_start": node.name_ref.loc.col_start,
-                            "col_end": node.name_ref.loc.col_end,
-                        }
-                    )
-                except Exception as e:
-                    print(node.to_dict(), e)
-            elif isinstance(node, ast.ArchHas):
-                for var in node.vars.items:
-                    vars.append(
-                        {
-                            "type": "has_var",
-                            "name": var.name.value,
-                            "line": var.loc.first_line,
-                            "col_start": var.loc.col_start,
-                            "col_end": var.loc.col_end,
-                        }
-                    )
-        return vars
-
-    def enter_architype(self, node: ast.Architype):
-        architype = {}
-        architype["name"] = node.name.value
-        architype["line"] = node.name.loc.first_line
-        architype["col_start"] = node.name.loc.col_start
-        architype["col_end"] = node.name.loc.col_end
-
-        architype["vars"] = self.extract_vars(node.body.kid)
-
-        self.output[self.output_key_map[node.arch_type.name]].append(architype)
-
-
-def get_symbol_at_position(doc, position: Position):
-    """
-    Return the symbol at a given position in the document.
-
-    Args:
-        doc (Document): The document to search for symbols.
-        position (Position): The position to search for a symbol.
-
-    Returns:
-        Symbol: The symbol at the given position, or None if no symbol is found.
-    """
-    symbols = doc.symbols
-    for symbol in symbols:
-        if (
-            symbol.location.range.start.line <= position.line
-            and symbol.location.range.end.line >= position.line
-        ):
-            return symbol
-    return None
