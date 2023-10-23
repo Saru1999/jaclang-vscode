@@ -26,11 +26,7 @@ from pygls import server, uris
 from common.validation import validate
 from common.completion import get_completion_items
 from common.format import format_jac
-from common.symbols import (
-    fill_workspace,
-    update_doc_tree,
-    get_doc_symbols,
-)
+from common.symbols import fill_workspace, update_doc_tree, get_doc_symbols
 from common.hover import get_symbol_at_pos
 
 
@@ -301,21 +297,17 @@ def hover(ls, params: lsp.HoverParams):
 
     # Find the symbol at the specified position
     symbol = get_symbol_at_pos(lsp_document, position)
-
     # Create a new Hover object with information about the symbol and return it
     if symbol is not None:
         return lsp.Hover(
             contents=lsp.MarkupContent(
-                kind=lsp.MarkupKind.PlainText, value=symbol.name
+                kind=lsp.MarkupKind.PlainText,
+                value=f"({symbol.sym_type}) {symbol.sym_name} \n {symbol.sym_doc}",
             ),
             range=symbol.location.range,
         )
 
-    return lsp.Hover(
-        contents=lsp.MarkupContent(
-            kind=lsp.MarkupKind.PlainText, value="Symbol not found"
-        )
-    )
+    return None
 
 
 # Symbol Handling
@@ -326,11 +318,9 @@ def workspace_symbol(ls, params: lsp.WorkspaceSymbolParams):
     """Workspace symbols."""
     symbols = []
     for doc in ls.workspace.documents.values():
-        if hasattr(doc, "symbols"):
-            symbols.extend(doc.symbols)
-        else:
+        if not hasattr(doc, "symbols"):
             doc.symbols = get_doc_symbols(ls, doc.uri)
-            symbols.extend(doc.symbols)
+        symbols.extend([s.sym_info for s in doc.symbols])
     return symbols
 
 
@@ -341,15 +331,13 @@ def document_symbol(ls, params: lsp.DocumentSymbolParams):
     doc = ls.workspace.get_text_document(uri)
     if not hasattr(doc, "symbols"):
         update_doc_tree(ls, doc.uri)
-        doc_symbols = get_doc_symbols(ls, doc.uri)
-        return [s for s in doc_symbols if s.location.uri == doc.uri]
-    else:
-        return [s for s in doc.symbols if s.location.uri == doc.uri]
+    doc_symbols = get_doc_symbols(ls, doc.uri)
+    return [s.doc_sym for s in doc_symbols if s.location.uri == doc.uri]
 
 
-# **********************************************************
-# Required Language Server Initialization and Exit handlers.
-# **********************************************************
+# LSP Server Initialization
+
+
 @LSP_SERVER.feature(lsp.INITIALIZE)
 def initialize(params: lsp.InitializeParams) -> None:
     """LSP handler for initialize request."""

@@ -65,14 +65,14 @@ def _validate_jac(doc_path: str, source: str) -> list[Diagnostic]:
     """
     diagnostics = []
     errors, warnings = jac_to_errors(doc_path, source)
-    for alert in errors + warnings:
+    for alert in errors:
         msg = alert.msg
         loc = alert.loc
         diagnostics.append(
             Diagnostic(
                 range=Range(
-                    start=Position(line=loc.first_line, character=loc.col_start),
-                    end=Position(line=loc.last_line, character=loc.col_end),
+                    start=Position(line=loc.first_line - 1, character=loc.col_start),
+                    end=Position(line=loc.last_line - 1, character=loc.col_end),
                 ),
                 message=msg,
                 severity=DiagnosticSeverity.Error

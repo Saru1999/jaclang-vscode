@@ -1,5 +1,6 @@
-from lsprotocol.types import Position, Location, TextDocumentItem, SymbolInformation
+from lsprotocol.types import Position, Location, TextDocumentItem
 from typing import Optional
+from .symbols import Symbol
 
 
 def is_contained(sym_location: Location, hover_position: Position) -> bool:
@@ -21,9 +22,7 @@ def is_contained(sym_location: Location, hover_position: Position) -> bool:
     )
 
 
-def get_symbol_at_pos(
-    doc: TextDocumentItem, pos: Position
-) -> Optional[SymbolInformation]:
+def get_symbol_at_pos(doc: TextDocumentItem, pos: Position) -> Optional[Symbol]:
     """
     Returns the symbol at the given position.
 

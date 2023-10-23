@@ -4,12 +4,16 @@ from typing import List
 
 from lsprotocol.types import Position, Range
 from pygls.server import LanguageServer
-from lsprotocol.types import TextDocumentItem, SymbolInformation, SymbolKind, Location
+from lsprotocol.types import (
+    TextDocumentItem,
+    SymbolInformation,
+    SymbolKind,
+    Location,
+    DocumentSymbol,
+)
 
-from jaclang.jac.passes import Pass
-import jaclang.jac.absyntree as ast
-from jaclang.jac.transpiler import jac_file_to_pass
 from jaclang.jac.workspace import Workspace
+from jaclang.jac.symtable import Symbol as WS_Symbol
 
 
 def fill_workspace(ls: LanguageServer) -> None:
@@ -124,7 +128,41 @@ def get_symbol_data(
         return None
 
 
-def get_doc_symbols(ls: LanguageServer, doc_uri: str) -> List[SymbolInformation]:
+class Symbol:
+    def __init__(self, doc_uri: str, ws_symbol: WS_Symbol) -> None:
+        self.ws_symbol = ws_symbol
+        self.sym_info = SymbolInformation(
+            name=self.ws_symbol.sym_name,
+            kind=_get_symbol_kind(str(self.ws_symbol.sym_type)),
+            location=Location(
+                uri=doc_uri,
+                range=Range(
+                    start=Position(
+                        line=self.ws_symbol.decl.sym_name_node.loc.first_line - 1,
+                        character=self.ws_symbol.decl.sym_name_node.loc.col_start,
+                    ),
+                    end=Position(
+                        line=self.ws_symbol.decl.sym_name_node.loc.last_line - 1,
+                        character=self.ws_symbol.decl.sym_name_node.loc.col_end,
+                    ),
+                ),
+            ),
+        )
+        self.doc_sym = DocumentSymbol(
+            name=self.sym_info.name,
+            kind=self.sym_info.kind,
+            range=self.sym_info.location.range,
+            selection_range=self.sym_info.location.range,
+            detail="",
+            children=[],
+        )
+        self.sym_doc = "Need to replace with self.ws_symbol.docstring"
+        self.sym_type = str(self.ws_symbol.sym_type)
+        self.sym_name = self.ws_symbol.sym_name
+        self.location = self.sym_info.location
+
+
+def get_doc_symbols(ls: LanguageServer, doc_uri: str) -> List[Symbol]:
     """
     Returns a list of SymbolInformation objects representing the symbols defined in the given document.
 
@@ -137,61 +175,18 @@ def get_doc_symbols(ls: LanguageServer, doc_uri: str) -> List[SymbolInformation]
     Returns:
     List[SymbolInformation]: A list of SymbolInformation objects representing the symbols defined in the document.
     """
-    symbols: List[SymbolInformation] = []
-
+    symbols: List[Symbol] = []
     doc_url = doc_uri.replace("file://", "")
-    jl_symbols = ls.jlws.get_symbols(doc_url)
-
-    for symbol in jl_symbols:
-        try:
-            symbols.append(
-                SymbolInformation(
-                    name=symbol.name,
-                    kind=_get_symbol_kind(symbol.sym_type.value),
-                    location=Location(
-                        uri=doc_uri,
-                        range=Range(
-                            start=Position(
-                                line=symbol.decl.loc.first_line - 1,
-                                character=symbol.decl.loc.col_start,
-                            ),
-                            end=Position(
-                                line=symbol.decl.loc.last_line - 1,
-                                character=symbol.decl.loc.col_end,
-                            ),
-                        ),
-                    ),
-                )
-            )
-            if hasattr(symbol.decl, "body"):
-                for var in symbol.decl.body.kid:
-                    if not isinstance(var, (ast.Ability, ast.ArchHas)):
-                        continue
-                    try:
-                        symbols.append(
-                            SymbolInformation(
-                                name=var.py_resolve_name(),
-                                kind=_get_symbol_kind(str(type(var))),
-                                location=Location(
-                                    uri=doc_uri,
-                                    range=Range(
-                                        start=Position(
-                                            line=var.loc.first_line - 1,
-                                            character=var.loc.col_start,
-                                        ),
-                                        end=Position(
-                                            line=var.loc.last_line - 1,
-                                            character=var.loc.col_end,
-                                        ),
-                                    ),
-                                ),
-                                container_name=symbol.name,
-                            )
-                        )
-                    except Exception as e:
-                        print(e)
-        except Exception as e:
-            print(e)
+    # Symbol Definitions
+    main_symbols = ls.jlws.get_symbols(doc_url)
+    for symbol in main_symbols:
+        main_symbol = Symbol(doc_uri, symbol)
+        symbols.append(main_symbol)
+    # # Symbol Usages
+    # uses_symbols = ls.jlws.get_uses(doc_url)
+    # for symbol in uses_symbols:
+    #     use_symbol = Symbol(doc_uri, symbol)
+    #     symbols.append(use_symbol)
     return symbols
 
 
@@ -207,14 +202,21 @@ def _get_symbol_kind(architype: str) -> SymbolKind:
     """
     architype_map = {
         "mod": SymbolKind.Module,
-        "ability": SymbolKind.Method,
+        "mod_var": SymbolKind.Variable,
         "var": SymbolKind.Variable,
-        "object": SymbolKind.Object,
+        "immutable": SymbolKind.Variable,
+        "ability": SymbolKind.Function,
+        "object": SymbolKind.Class,
         "node": SymbolKind.Class,
-        "edge": SymbolKind.Interface,
+        "edge": SymbolKind.Class,
         "walker": SymbolKind.Class,
         "enum": SymbolKind.Enum,
+        "test": SymbolKind.Function,
+        "type": SymbolKind.TypeParameter,
         "impl": SymbolKind.Method,
         "field": SymbolKind.Field,
+        "method": SymbolKind.Method,
+        "constructor": SymbolKind.Constructor,
+        "enum_member": SymbolKind.EnumMember,
     }
     return architype_map.get(architype, SymbolKind.Variable)
