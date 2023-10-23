@@ -13,7 +13,7 @@ from lsprotocol.types import (
 )
 
 from jaclang.jac.workspace import Workspace
-from jaclang.jac.symtable import Symbol as WS_Symbol
+from jaclang.jac.absyntree import AstNode, AbilityDef
 
 
 def fill_workspace(ls: LanguageServer) -> None:
@@ -129,8 +129,9 @@ def get_symbol_data(
 
 
 class Symbol:
-    def __init__(self, doc_uri: str, ws_symbol: WS_Symbol) -> None:
-        self.ws_symbol = ws_symbol
+    def __init__(self, doc_uri: str, node: AstNode) -> None:
+        self.node = node
+        self.ws_symbol = self.node.sym_link
         self.sym_info = SymbolInformation(
             name=self.ws_symbol.sym_name,
             kind=_get_symbol_kind(str(self.ws_symbol.sym_type)),
@@ -138,12 +139,12 @@ class Symbol:
                 uri=doc_uri,
                 range=Range(
                     start=Position(
-                        line=self.ws_symbol.decl.sym_name_node.loc.first_line - 1,
-                        character=self.ws_symbol.decl.sym_name_node.loc.col_start,
+                        line=self.node.sym_name_node.loc.first_line - 1,
+                        character=self.node.sym_name_node.loc.col_start,
                     ),
                     end=Position(
-                        line=self.ws_symbol.decl.sym_name_node.loc.last_line - 1,
-                        character=self.ws_symbol.decl.sym_name_node.loc.col_end,
+                        line=self.node.sym_name_node.loc.last_line - 1,
+                        character=self.node.sym_name_node.loc.col_end,
                     ),
                 ),
             ),
@@ -178,15 +179,13 @@ def get_doc_symbols(ls: LanguageServer, doc_uri: str) -> List[Symbol]:
     symbols: List[Symbol] = []
     doc_url = doc_uri.replace("file://", "")
     # Symbol Definitions
-    main_symbols = ls.jlws.get_symbols(doc_url)
-    for symbol in main_symbols:
-        main_symbol = Symbol(doc_uri, symbol)
-        symbols.append(main_symbol)
-    # # Symbol Usages
-    # uses_symbols = ls.jlws.get_uses(doc_url)
-    # for symbol in uses_symbols:
-    #     use_symbol = Symbol(doc_uri, symbol)
-    #     symbols.append(use_symbol)
+    defn_nodes = ls.jlws.get_definitions(doc_url)
+    uses_nodes = ls.jlws.get_uses(doc_url)
+    for node in defn_nodes + uses_nodes:
+        if isinstance(node, AbilityDef):
+            continue
+        symbol = Symbol(doc_uri, node)
+        symbols.append(symbol)
     return symbols
 
 
