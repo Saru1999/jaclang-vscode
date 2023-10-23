@@ -273,7 +273,12 @@ def completions(params: Optional[lsp.CompletionParams] = None) -> lsp.Completion
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DEFINITION)
 def definition(ls, params: lsp.DefinitionParams):
-    pass
+    doc = ls.workspace.get_document(params.text_document.uri)
+    if not hasattr(doc, "symbols"):
+        update_doc_tree(ls, doc.uri)
+    symbol = get_symbol_at_pos(doc, params.position)
+    if symbol is not None:
+        return symbol.defn_loc
 
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_HOVER)

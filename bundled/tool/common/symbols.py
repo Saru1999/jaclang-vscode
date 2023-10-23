@@ -161,6 +161,19 @@ class Symbol:
         self.sym_type = str(self.ws_symbol.sym_type)
         self.sym_name = self.ws_symbol.sym_name
         self.location = self.sym_info.location
+        self.defn_loc = Location(
+            uri=doc_uri,
+            range=Range(
+                start=Position(
+                    line=self.ws_symbol.decl.sym_name_node.loc.first_line - 1,
+                    character=self.ws_symbol.decl.sym_name_node.loc.col_start,
+                ),
+                end=Position(
+                    line=self.ws_symbol.decl.sym_name_node.loc.last_line - 1,
+                    character=self.ws_symbol.decl.sym_name_node.loc.col_end,
+                ),
+            ),
+        )
 
 
 def get_doc_symbols(ls: LanguageServer, doc_uri: str) -> List[Symbol]:
