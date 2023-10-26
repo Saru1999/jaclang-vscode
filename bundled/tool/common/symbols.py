@@ -13,7 +13,7 @@ from lsprotocol.types import (
 )
 
 from jaclang.jac.workspace import Workspace
-from jaclang.jac.absyntree import AstNode, AbilityDef
+from jaclang.jac.absyntree import AstNode, AbilityDef, String
 
 
 def fill_workspace(ls: LanguageServer) -> None:
@@ -53,8 +53,7 @@ def update_doc_tree(ls: LanguageServer, doc_uri: str) -> None:
         None
     """
     doc = ls.workspace.get_document(doc_uri)
-    doc.symbols = [s for s in get_doc_symbols(ls, doc.uri) if s.location.uri == doc.uri]
-    update_doc_deps(ls, doc.uri)
+    doc.symbols = get_doc_symbols(ls, doc.uri)
 
 
 def update_doc_deps(ls: LanguageServer, doc_uri: str) -> None:
@@ -89,47 +88,19 @@ def update_doc_deps(ls: LanguageServer, doc_uri: str) -> None:
             import_file_path = (
                 f"{os.path.join(os.path.dirname(doc_url), dep['path'])}.jac"
             )
-            dep_symbols = get_doc_symbols(
-                ls,
-                f"file://{import_file_path}",
-            )
-            dependencies = {dep["path"]: {"symbols": dep_symbols}}
-            doc.dependencies.update(dependencies)
+            dep_doc = ls.workspace.get_document(f"file://{import_file_path}")
+            if not hasattr(dep_doc, "symbols"):
+                update_doc_tree(ls, dep_doc.uri)
+            dep_symbols = [s for s in dep_doc.symbols if not s.is_use]
+            doc.dependencies.update({dep["path"]: {"symbols": dep_symbols}})
         else:
             # TODO: Add support for python file imports
             pass
 
 
-def get_symbol_data(
-    ls: LanguageServer, uri: str, name: str, architype: str
-) -> SymbolInformation | None:
-    """
-    Retrieves symbol information for a given symbol name and archetype from a document.
-
-    Args:
-        ls (LanguageServer): The language server instance.
-        uri (str): The URI of the document to retrieve symbol information from.
-        name (str): The name of the symbol to retrieve information for.
-        architype (str): The archetype of the symbol to retrieve information for.
-
-    Returns:
-        SymbolInformation | None: The symbol information if found, else None.
-    """
-    doc = ls.workspace.get_document(uri)
-    if not hasattr(doc, "symbols"):
-        doc.symbols = get_doc_symbols(ls, doc.uri)
-
-    symbols_pool = doc.symbols
-
-    for symbol in symbols_pool:
-        if symbol.name == name and symbol.kind == _get_symbol_kind(architype):
-            return symbol
-    else:
-        return None
-
-
 class Symbol:
-    def __init__(self, doc_uri: str, node: AstNode) -> None:
+    def __init__(self, doc_uri: str, node: AstNode, is_use: bool = False) -> None:
+        self.is_use = is_use
         self.node = node
         self.ws_symbol = self.node.sym_link
         self.sym_info = SymbolInformation(
@@ -140,11 +111,11 @@ class Symbol:
                 range=Range(
                     start=Position(
                         line=self.node.sym_name_node.loc.first_line - 1,
-                        character=self.node.sym_name_node.loc.col_start,
+                        character=self.node.sym_name_node.loc.col_start - 1,
                     ),
                     end=Position(
                         line=self.node.sym_name_node.loc.last_line - 1,
-                        character=self.node.sym_name_node.loc.col_end,
+                        character=self.node.sym_name_node.loc.col_end - 1,
                     ),
                 ),
             ),
@@ -157,20 +128,25 @@ class Symbol:
             detail="",
             children=[],
         )
-        self.sym_doc = "Need to replace with self.ws_symbol.docstring"
+        self.sym_doc = (
+            self.ws_symbol.decl.doc.value[3:-3]
+            if hasattr(self.ws_symbol.decl, "doc")
+            and isinstance(self.ws_symbol.decl.doc, String)
+            else ""
+        )
         self.sym_type = str(self.ws_symbol.sym_type)
         self.sym_name = self.ws_symbol.sym_name
         self.location = self.sym_info.location
         self.defn_loc = Location(
-            uri=doc_uri,
+            uri=f"file://{os.path.join(os.getcwd(), self.ws_symbol.decl.loc.mod_path)}",
             range=Range(
                 start=Position(
                     line=self.ws_symbol.decl.sym_name_node.loc.first_line - 1,
-                    character=self.ws_symbol.decl.sym_name_node.loc.col_start,
+                    character=self.ws_symbol.decl.sym_name_node.loc.col_start - 1,
                 ),
                 end=Position(
                     line=self.ws_symbol.decl.sym_name_node.loc.last_line - 1,
-                    character=self.ws_symbol.decl.sym_name_node.loc.col_end,
+                    character=self.ws_symbol.decl.sym_name_node.loc.col_end - 1,
                 ),
             ),
         )
@@ -197,7 +173,7 @@ def get_doc_symbols(ls: LanguageServer, doc_uri: str) -> List[Symbol]:
     for node in defn_nodes + uses_nodes:
         if isinstance(node, AbilityDef):
             continue
-        symbol = Symbol(doc_uri, node)
+        symbol = Symbol(doc_uri, node, True if node in uses_nodes else False)
         symbols.append(symbol)
     return symbols
 

@@ -13,5 +13,6 @@
     "settings.showNotifications.off.description": "All notifications are turned off, any errors or warning are still available in the logs.",
     "settings.showNotifications.onError.description": "Notifications are shown only in the case of an error.",
     "settings.showNotifications.onWarning.description": "Notifications are shown for errors and warnings.",
-    "settings.showNotifications.always.description": "Notifications are show for anything that the server chooses to show."
+    "settings.showNotifications.always.description": "Notifications are show for anything that the server chooses to show.",
+    "settings.showWarnings.description": "Controls whether warnings are shown in the editor"
 }

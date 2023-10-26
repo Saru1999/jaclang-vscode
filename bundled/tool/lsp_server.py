@@ -4,8 +4,8 @@
 import json
 import os
 import pathlib
-import sys
 from typing import Optional
+import copy
 
 from common.utils import normalize_path, update_sys_path
 
@@ -26,7 +26,12 @@ from pygls import server, uris
 from common.validation import validate
 from common.completion import get_completion_items
 from common.format import format_jac
-from common.symbols import fill_workspace, update_doc_tree, get_doc_symbols
+from common.symbols import (
+    fill_workspace,
+    update_doc_tree,
+    update_doc_deps,
+    get_doc_symbols,
+)
 from common.hover import get_symbol_at_pos
 
 
@@ -60,6 +65,8 @@ def did_change(ls, params: lsp.DidChangeTextDocumentParams):
         params (lsp.DidChangeTextDocumentParams): The parameters for the text document change.
     """
     update_doc_tree(ls, params.text_document.uri)
+    update_doc_deps(ls, params.text_document.uri)
+    ls.jlws.rebuild_file(params.text_document.uri.replace("file://", ""))
     validate(ls, params)
 
 
@@ -73,6 +80,7 @@ def did_save(ls, params: lsp.DidSaveTextDocumentParams):
         params (lsp.DidSaveTextDocumentParams): The parameters for the saved text document.
     """
     update_doc_tree(ls, params.text_document.uri)
+    update_doc_deps(ls, params.text_document.uri)
     validate(ls, params)
 
 
@@ -211,30 +219,30 @@ async def did_open(ls, params: lsp.DidChangeNotebookDocumentParams):
 # Features
 
 
-@LSP_SERVER.feature(lsp.TEXT_DOCUMENT_FORMATTING)
-def formatting(ls, params: lsp.DocumentFormattingParams):
-    """
-    TODO: Selective Formatting needs to be implemented
-    Formats the document.
+# @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_FORMATTING)
+# def formatting(ls, params: lsp.DocumentFormattingParams):
+#     """
+#     TODO: Selective Formatting needs to be implemented
+#     Formats the document.
 
-    :param ls: The language server instance.
-    :type ls: lsp.LanguageServer
-    :param params: The document formatting parameters.
-    :type params: lsp.DocumentFormattingParams
-    :return: A list of text edits to apply to the document.
-    :rtype: List[lsp.TextEdit]
-    """
-    doc_uri = params.text_document.uri
-    formatted_text = format_jac(doc_uri)
-    return [
-        lsp.TextEdit(
-            range=lsp.Range(
-                start=lsp.Position(line=0, character=0),
-                end=lsp.Position(line=len(formatted_text), character=0),
-            ),
-            new_text=formatted_text,
-        )
-    ]
+#     :param ls: The language server instance.
+#     :type ls: lsp.LanguageServer
+#     :param params: The document formatting parameters.
+#     :type params: lsp.DocumentFormattingParams
+#     :return: A list of text edits to apply to the document.
+#     :rtype: List[lsp.TextEdit]
+#     """
+#     doc_uri = params.text_document.uri
+#     formatted_text = format_jac(doc_uri)
+#     return [
+#         lsp.TextEdit(
+#             range=lsp.Range(
+#                 start=lsp.Position(line=0, character=0),
+#                 end=lsp.Position(line=len(formatted_text), character=0),
+#             ),
+#             new_text=formatted_text,
+#         )
+#     ]
 
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_COMPLETION)
@@ -260,7 +268,7 @@ def completions(params: Optional[lsp.CompletionParams] = None) -> lsp.Completion
 #     2. Use Python Syntax Highlighting for python blocks
 #     """
 #     higlights = []
-#     doc = ls.workspace.get_document(params.text_document.uri)
+#     doc = ls.workspace.get_text_document(params.text_document.uri)
 #     for symbol in doc.symbols:
 #         higlights.append(
 #             lsp.DocumentHighlight(
@@ -273,7 +281,7 @@ def completions(params: Optional[lsp.CompletionParams] = None) -> lsp.Completion
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DEFINITION)
 def definition(ls, params: lsp.DefinitionParams):
-    doc = ls.workspace.get_document(params.text_document.uri)
+    doc = ls.workspace.get_text_document(params.text_document.uri)
     if not hasattr(doc, "symbols"):
         update_doc_tree(ls, doc.uri)
     symbol = get_symbol_at_pos(doc, params.position)
@@ -296,7 +304,7 @@ def hover(ls, params: lsp.HoverParams):
     """
     uri = params.text_document.uri
     position = params.position
-    lsp_document = ls.workspace.get_document(uri)
+    lsp_document = ls.workspace.get_text_document(uri)
     if lsp_document is None:
         return None
 
@@ -307,7 +315,9 @@ def hover(ls, params: lsp.HoverParams):
         return lsp.Hover(
             contents=lsp.MarkupContent(
                 kind=lsp.MarkupKind.PlainText,
-                value=f"({symbol.sym_type}) {symbol.sym_name} \n {symbol.sym_doc}",
+                value="\n".join(
+                    [f"({symbol.sym_type}) {symbol.sym_name}", symbol.sym_doc]
+                ),
             ),
             range=symbol.location.range,
         )
@@ -318,15 +328,15 @@ def hover(ls, params: lsp.HoverParams):
 # Symbol Handling
 
 
-@LSP_SERVER.feature(lsp.WORKSPACE_SYMBOL)
-def workspace_symbol(ls, params: lsp.WorkspaceSymbolParams):
-    """Workspace symbols."""
-    symbols = []
-    for doc in ls.workspace.documents.values():
-        if not hasattr(doc, "symbols"):
-            doc.symbols = get_doc_symbols(ls, doc.uri)
-        symbols.extend([s.sym_info for s in doc.symbols])
-    return symbols
+# @LSP_SERVER.feature(lsp.WORKSPACE_SYMBOL)
+# def workspace_symbol(ls, params: lsp.WorkspaceSymbolParams):
+#     """Workspace symbols."""
+#     symbols = []
+#     for doc in ls.workspace.documents.values():
+#         if not hasattr(doc, "symbols"):
+#             update_doc_tree(ls, doc.uri)
+#         symbols.extend([s.sym_info for s in doc.symbols])
+#     return symbols
 
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DOCUMENT_SYMBOL)
@@ -336,8 +346,7 @@ def document_symbol(ls, params: lsp.DocumentSymbolParams):
     doc = ls.workspace.get_text_document(uri)
     if not hasattr(doc, "symbols"):
         update_doc_tree(ls, doc.uri)
-    doc_symbols = get_doc_symbols(ls, doc.uri)
-    return [s.doc_sym for s in doc_symbols if s.location.uri == doc.uri]
+    return [s.doc_sym for s in doc.symbols]
 
 
 # LSP Server Initialization
@@ -369,14 +378,22 @@ def initialize(params: lsp.InitializeParams) -> None:
     fill_workspace(LSP_SERVER)
 
 
+@LSP_SERVER.feature(lsp.WORKSPACE_DID_CHANGE_CONFIGURATION)
+def did_change_configuration(ls, params: lsp.DidChangeConfigurationParams):
+    """LSP handler for didChangeConfiguration request."""
+    settings = params.settings["jac"]
+    _update_workspace_settings(settings)
+    log_to_output(
+        f"Settings used to run Server:\r\n{json.dumps(settings, indent=4, ensure_ascii=False)}\r\n"
+    )
+
+
 # *****************************************************
 # Internal functional and settings management APIs.
 # *****************************************************
 def _get_global_defaults():
     return {
         "path": GLOBAL_SETTINGS.get("path", []),
-        "interpreter": GLOBAL_SETTINGS.get("interpreter", [sys.executable]),
-        "args": GLOBAL_SETTINGS.get("args", []),
         "severity": GLOBAL_SETTINGS.get(
             "severity",
             {
@@ -386,8 +403,8 @@ def _get_global_defaults():
         ),
         "importStrategy": GLOBAL_SETTINGS.get("importStrategy", "useBundled"),
         "showNotifications": GLOBAL_SETTINGS.get("showNotifications", "off"),
-        "extraPaths": GLOBAL_SETTINGS.get("extraPaths", []),
         "reportingScope": GLOBAL_SETTINGS.get("reportingScope", "file"),
+        "showWarnings": GLOBAL_SETTINGS.get("showWarnings", False),
     }
 
 

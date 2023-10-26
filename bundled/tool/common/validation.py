@@ -1,6 +1,6 @@
 from jaclang.jac.passes.transform import Alert
 from jaclang.jac.parser import JacParser
-from jaclang.jac.absyntree import SourceString
+from jaclang.jac.absyntree import JacSource
 from jaclang.jac.passes.blue import pass_schedule
 
 from lsprotocol.types import Diagnostic, DiagnosticSeverity, Position, Range
@@ -22,12 +22,10 @@ def jac_to_errors(
     Returns:
         tuple[list[Alert], list[Alert]]: A tuple of errors and warnings
     """
-    source = SourceString(source)
-    prse = JacParser(
-        mod_path=file_path, input_ir=source, base_path=base_dir, prior=None
-    )
+    source = JacSource(source, file_path)
+    prse = JacParser(source)
     for i in schedule:
-        prse = i(mod_path=file_path, input_ir=prse.ir, base_path=base_dir, prior=prse)
+        prse = i(input_ir=prse.ir, prior=prse)
     return prse.errors_had, prse.warnings_had
 
 
@@ -71,8 +69,10 @@ def _validate_jac(doc_path: str, source: str) -> list[Diagnostic]:
         diagnostics.append(
             Diagnostic(
                 range=Range(
-                    start=Position(line=loc.first_line - 1, character=loc.col_start),
-                    end=Position(line=loc.last_line - 1, character=loc.col_end),
+                    start=Position(
+                        line=loc.first_line - 1, character=loc.col_start - 1
+                    ),
+                    end=Position(line=loc.last_line - 1, character=loc.col_end - 1),
                 ),
                 message=msg,
                 severity=DiagnosticSeverity.Error

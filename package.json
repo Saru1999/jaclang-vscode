@@ -143,6 +143,12 @@
                     ],
                     "scope": "machine",
                     "type": "string"
+                },
+                "jaseci.showWarnings": {
+                    "default": false,
+                    "markdownDescription": "%settings.showWarnings.description%",
+                    "scope": "resource",
+                    "type": "boolean"
                 }
             }
         },
