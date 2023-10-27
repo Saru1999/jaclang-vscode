@@ -328,15 +328,15 @@ def hover(ls, params: lsp.HoverParams):
 # Symbol Handling
 
 
-# @LSP_SERVER.feature(lsp.WORKSPACE_SYMBOL)
-# def workspace_symbol(ls, params: lsp.WorkspaceSymbolParams):
-#     """Workspace symbols."""
-#     symbols = []
-#     for doc in ls.workspace.documents.values():
-#         if not hasattr(doc, "symbols"):
-#             update_doc_tree(ls, doc.uri)
-#         symbols.extend([s.sym_info for s in doc.symbols])
-#     return symbols
+@LSP_SERVER.feature(lsp.WORKSPACE_SYMBOL)
+def workspace_symbol(ls, params: lsp.WorkspaceSymbolParams):
+    """Workspace symbols."""
+    symbols = []
+    for doc in ls.workspace.documents.values():
+        if not hasattr(doc, "symbols"):
+            update_doc_tree(ls, doc.uri)
+        symbols.extend([s.sym_info for s in doc.symbols])
+    return symbols
 
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DOCUMENT_SYMBOL)

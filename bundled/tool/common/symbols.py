@@ -168,8 +168,10 @@ def get_doc_symbols(ls: LanguageServer, doc_uri: str) -> List[Symbol]:
     symbols: List[Symbol] = []
     doc_url = doc_uri.replace("file://", "")
     # Symbol Definitions
-    defn_nodes = ls.jlws.get_definitions(doc_url)
-    uses_nodes = ls.jlws.get_uses(doc_url)
+    defn_nodes = [
+        x for x in ls.jlws.get_definitions(doc_url) if x.loc.mod_path == doc_url
+    ]
+    uses_nodes = [x for x in ls.jlws.get_uses(doc_url) if x.loc.mod_path == doc_url]
     for node in defn_nodes + uses_nodes:
         if isinstance(node, AbilityDef):
             continue
