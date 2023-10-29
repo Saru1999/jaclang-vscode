@@ -1,11 +1,14 @@
 from __future__ import annotations
-from typing import Any, List, Tuple, Union
+from typing import Any, List, Tuple, Union, Optional
 import os
 import pathlib
 import sysconfig
 import site
 import sys
 
+from lsprotocol.types import Position, Location, TextDocumentItem
+
+from .symbols import Symbol
 
 def as_list(content: Union[Any, List[Any], Tuple[Any]]) -> List[Any]:
     """Ensures we always get a list"""
@@ -85,3 +88,39 @@ def update_sys_path(path_to_add: str, strategy: str) -> None:
             sys.path.insert(0, path_to_add)
         else:
             sys.path.append(path_to_add)
+
+
+def is_contained(sym_location: Location, hover_position: Position) -> bool:
+    """
+    Returns True if the hover position is contained within the symbol location.
+
+    :param sym_location: The location of the symbol being checked.
+    :type sym_location: Location
+    :param hover_position: The position of the hover being checked.
+    :type hover_position: Position
+    :return: True if the hover position is contained within the symbol location, False otherwise.
+    :rtype: bool
+    """
+    return (
+        sym_location.range.start.line <= hover_position.line
+        and sym_location.range.end.line >= hover_position.line
+        and sym_location.range.start.character <= hover_position.character
+        and sym_location.range.end.character >= hover_position.character
+    )
+
+
+def get_symbol_at_pos(doc: TextDocumentItem, pos: Position) -> Optional[Symbol]:
+    """
+    Returns the symbol at the given position.
+
+    :param doc: The document to check.
+    :type doc: TextDocumentItem
+    :param pos: The position to check.
+    :type pos: Position
+    :return: The symbol at the given position, or None if no symbol is found.
+    :rtype: Optional[Symbol]
+    """
+    for sym in doc.symbols:
+        if is_contained(sym.location, pos):
+            return sym
+    return None

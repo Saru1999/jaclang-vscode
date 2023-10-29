@@ -1,0 +1,226 @@
+[
+    {
+        "range": {
+            "start": {
+                "line": 9,
+                "character": 20
+            },
+            "end": {
+                "line": 9,
+                "character": 37
+            }
+        },
+        "message": "Event style abilities not supported in bootstrap Jac",
+        "severity": 1
+    },
+    {
+        "range": {
+            "start": {
+                "line": 15,
+                "character": 15
+            },
+            "end": {
+                "line": 15,
+                "character": 35
+            }
+        },
+        "message": "Event style abilities not supported in bootstrap Jac",
+        "severity": 1
+    },
+    {
+        "range": {
+            "start": {
+                "line": 39,
+                "character": 13
+            },
+            "end": {
+                "line": 39,
+                "character": 16
+            }
+        },
+        "message": "Data spatial features not supported in bootstrap Jac.",
+        "severity": 2
+    },
+    {
+        "range": {
+            "start": {
+                "line": 39,
+                "character": 9
+            },
+            "end": {
+                "line": 39,
+                "character": 33
+            }
+        },
+        "message": "Data spatial features not supported in bootstrap Jac.",
+        "severity": 2
+    },
+    {
+        "range": {
+            "start": {
+                "line": 41,
+                "character": 11
+            },
+            "end": {
+                "line": 41,
+                "character": 14
+            }
+        },
+        "message": "Data spatial features not supported in bootstrap Jac.",
+        "severity": 2
+    },
+    {
+        "range": {
+            "start": {
+                "line": 41,
+                "character": 5
+            },
+            "end": {
+                "line": 41,
+                "character": 15
+            }
+        },
+        "message": "Data spatial features not supported in bootstrap Jac.",
+        "severity": 2
+    },
+    {
+        "range": {
+            "start": {
+                "line": 52,
+                "character": 9
+            },
+            "end": {
+                "line": 52,
+                "character": 19
+            }
+        },
+        "message": "Data spatial features not supported in bootstrap Jac.",
+        "severity": 2
+    },
+    {
+        "range": {
+            "start": {
+                "line": 31,
+                "character": 11
+            },
+            "end": {
+                "line": 31,
+                "character": 14
+            }
+        },
+        "message": "Data spatial features not supported in bootstrap Jac.",
+        "severity": 2
+    },
+    {
+        "range": {
+            "start": {
+                "line": 31,
+                "character": 5
+            },
+            "end": {
+                "line": 31,
+                "character": 15
+            }
+        },
+        "message": "Data spatial features not supported in bootstrap Jac.",
+        "severity": 2
+    },
+    {
+        "range": {
+            "start": {
+                "line": 31,
+                "character": 11
+            },
+            "end": {
+                "line": 31,
+                "character": 14
+            }
+        },
+        "message": "Data spatial features not supported in bootstrap Jac.",
+        "severity": 2
+    },
+    {
+        "range": {
+            "start": {
+                "line": 31,
+                "character": 5
+            },
+            "end": {
+                "line": 31,
+                "character": 15
+            }
+        },
+        "message": "Data spatial features not supported in bootstrap Jac.",
+        "severity": 2
+    },
+    {
+        "range": {
+            "start": {
+                "line": 39,
+                "character": 13
+            },
+            "end": {
+                "line": 39,
+                "character": 16
+            }
+        },
+        "message": "Data spatial features not supported in bootstrap Jac.",
+        "severity": 2
+    },
+    {
+        "range": {
+            "start": {
+                "line": 39,
+                "character": 9
+            },
+            "end": {
+                "line": 39,
+                "character": 33
+            }
+        },
+        "message": "Data spatial features not supported in bootstrap Jac.",
+        "severity": 2
+    },
+    {
+        "range": {
+            "start": {
+                "line": 41,
+                "character": 11
+            },
+            "end": {
+                "line": 41,
+                "character": 14
+            }
+        },
+        "message": "Data spatial features not supported in bootstrap Jac.",
+        "severity": 2
+    },
+    {
+        "range": {
+            "start": {
+                "line": 41,
+                "character": 5
+            },
+            "end": {
+                "line": 41,
+                "character": 15
+            }
+        },
+        "message": "Data spatial features not supported in bootstrap Jac.",
+        "severity": 2
+    },
+    {
+        "range": {
+            "start": {
+                "line": 52,
+                "character": 9
+            },
+            "end": {
+                "line": 52,
+                "character": 19
+            }
+        },
+        "message": "Data spatial features not supported in bootstrap Jac.",
+        "severity": 2
+    }
+]

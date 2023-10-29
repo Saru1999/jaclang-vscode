@@ -7,7 +7,7 @@ import pathlib
 from typing import Optional
 import copy
 
-from common.utils import normalize_path, update_sys_path
+from common.utils import normalize_path, update_sys_path, get_symbol_at_pos
 
 
 # Ensure that we can import LSP libraries, and other bundled libraries.
@@ -26,13 +26,9 @@ from pygls import server, uris
 from common.validation import validate
 from common.completion import get_completion_items
 from common.format import format_jac
-from common.symbols import (
-    fill_workspace,
-    update_doc_tree,
-    update_doc_deps,
-    get_doc_symbols,
-)
-from common.hover import get_symbol_at_pos
+from common.symbols import fill_workspace, update_doc_tree, update_doc_deps
+from common.hover import get_hover_info
+from common.logging import log_to_output
 
 
 class JacLanguageServer(server.LanguageServer):
@@ -55,57 +51,67 @@ LSP_SERVER = JacLanguageServer(
 # ************** Language Server features ********************
 
 
-@LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DID_CHANGE)
-def did_change(ls, params: lsp.DidChangeTextDocumentParams):
-    """
-    Update the document tree and validate the changes made to the text document.
+# @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DID_CHANGE)
+# def did_change(ls, params: lsp.DidChangeTextDocumentParams):
+#     """
+#     Update the document tree and validate the changes made to the text document.
 
-    Args:
-        ls (LanguageServer): The language server instance.
-        params (lsp.DidChangeTextDocumentParams): The parameters for the text document change.
-    """
-    update_doc_tree(ls, params.text_document.uri)
-    update_doc_deps(ls, params.text_document.uri)
-    ls.jlws.rebuild_file(params.text_document.uri.replace("file://", ""))
-    validate(ls, params)
-
-
-@LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DID_SAVE)
-def did_save(ls, params: lsp.DidSaveTextDocumentParams):
-    """
-    Updates the document tree and validates the saved text document.
-
-    Args:
-        ls (LanguageServer): The language server instance.
-        params (lsp.DidSaveTextDocumentParams): The parameters for the saved text document.
-    """
-    update_doc_tree(ls, params.text_document.uri)
-    update_doc_deps(ls, params.text_document.uri)
-    validate(ls, params)
+#     Args:
+#         ls (LanguageServer): The language server instance.
+#         params (lsp.DidChangeTextDocumentParams): The parameters for the text document change.
+#     """
+#     diagnostics = validate(ls, params)
+#     ls.publish_diagnostics(params.text_document.uri, diagnostics)
+#     show_doc_info(ls, params.text_document.uri)
+#     if not diagnostics:
+#         update_doc_tree(ls, params.text_document.uri)
+#         update_doc_deps(ls, params.text_document.uri)
+#         ls.jlws.rebuild_file(params.text_document.uri.replace("file://", ""))
 
 
-@LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DID_CLOSE)
-def did_close(ls, params: lsp.DidCloseTextDocumentParams):
-    """
-    Callback function for when a text document is closed in the language server.
+# @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DID_SAVE)
+# def did_save(ls, params: lsp.DidSaveTextDocumentParams):
+#     """
+#     Updates the document tree and validates the saved text document.
 
-    :param ls: The language server instance.
-    :type ls: LanguageServer
-    :param params: The parameters for the text document that was closed.
-    :type params: lsp.DidCloseTextDocumentParams
-    """
-    pass
+#     Args:
+#         ls (LanguageServer): The language server instance.
+#         params (lsp.DidSaveTextDocumentParams): The parameters for the saved text document.
+#     """
+#     diagnostics = validate(ls, params)
+#     ls.publish_diagnostics(params.text_document.uri, diagnostics)
+#     if not diagnostics:
+#         update_doc_tree(ls, params.text_document.uri)
+#         update_doc_deps(ls, params.text_document.uri)
+#         ls.jlws.rebuild_file(params.text_document.uri.replace("file://", ""))
 
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DID_OPEN)
-def did_open(ls, params: lsp.DidOpenTextDocumentParams):
+def did_open(ls: server.LanguageServer, params: lsp.DidOpenTextDocumentParams):
     """
     This function is called when a text document is opened in the client.
     It fills the workspace if it is not already filled and validates the parameters.
     """
     if not ls.workspace_filled:
         fill_workspace(ls)
-    validate(ls, params)
+    # ls.publish_diagnostics(params.text_document.uri, validate(ls, params))
+    show_doc_info(ls, params.text_document.uri)
+
+
+def show_doc_info(ls, uri):
+    doc = ls.workspace.get_document(uri)
+    if not hasattr(doc, "symbols"):
+        log_to_output(ls, "No symbols found")
+    else:
+        for symbol in doc.symbols:
+            log_to_output(ls, "Symbols found")
+            log_to_output(ls, str(doc.symbols))
+
+    if not hasattr(doc, "dependancies"):
+        log_to_output(ls, "No dependancies found")
+    else:
+        log_to_output(ls, "Dependancies found")
+        log_to_output(ls, str(doc.dependancies))
 
 
 # Handle File Operations
@@ -159,7 +165,7 @@ def did_rename_files(ls: server.LanguageServer, params: lsp.RenameFilesParams):
                     request_result = "Yes"
                     if request_result == "Yes":
                         # TODO: Handle the rename of the import statement
-                        log_to_output("Accepted")
+                        log_to_output(ls, "Accepted")
     ls.workspace.remove_text_document(old_uri)
     del ls.dep_table[old_uri.replace("file://", "")]
     fill_workspace(ls)
@@ -257,26 +263,7 @@ def completions(params: Optional[lsp.CompletionParams] = None) -> lsp.Completion
     :rtype: lsp.CompletionList
     """
     completion_items = get_completion_items(LSP_SERVER, params)
-    return lsp.CompletionList(is_incomplete=False, items=completion_items)
-
-
-# @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DOCUMENT_HIGHLIGHT)
-# def document_highlight(ls, params: lsp.DocumentHighlightParams):
-#     """
-#     TODO Things to happen on text document document highlight:
-#     1. Highlight the Symbols
-#     2. Use Python Syntax Highlighting for python blocks
-#     """
-#     higlights = []
-#     doc = ls.workspace.get_text_document(params.text_document.uri)
-#     for symbol in doc.symbols:
-#         higlights.append(
-#             lsp.DocumentHighlight(
-#                 range=symbol.location.range,
-#                 kind=lsp.DocumentHighlightKind.Read,
-#             )
-#         )
-#     return higlights
+    return lsp.CompletionList(is_incomplete=True, items=completion_items)
 
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DEFINITION)
@@ -308,21 +295,7 @@ def hover(ls, params: lsp.HoverParams):
     if lsp_document is None:
         return None
 
-    # Find the symbol at the specified position
-    symbol = get_symbol_at_pos(lsp_document, position)
-    # Create a new Hover object with information about the symbol and return it
-    if symbol is not None:
-        return lsp.Hover(
-            contents=lsp.MarkupContent(
-                kind=lsp.MarkupKind.PlainText,
-                value="\n".join(
-                    [f"({symbol.sym_type}) {symbol.sym_name}", symbol.sym_doc]
-                ),
-            ),
-            range=symbol.location.range,
-        )
-
-    return None
+    return get_hover_info(lsp_document, position)
 
 
 # Symbol Handling
@@ -355,7 +328,7 @@ def document_symbol(ls, params: lsp.DocumentSymbolParams):
 @LSP_SERVER.feature(lsp.INITIALIZE)
 def initialize(params: lsp.InitializeParams) -> None:
     """LSP handler for initialize request."""
-    log_to_output(f"CWD Server: {os.getcwd()}")
+    log_to_output(LSP_SERVER, f"CWD Server: {os.getcwd()}")
     import_strategy = os.getenv("LS_IMPORT_STRATEGY", "useBundled")
     update_sys_path(os.getcwd(), import_strategy)
 
@@ -364,10 +337,12 @@ def initialize(params: lsp.InitializeParams) -> None:
     settings = params.initialization_options["settings"]
     _update_workspace_settings(settings)
     log_to_output(
-        f"Settings used to run Server:\r\n{json.dumps(settings, indent=4, ensure_ascii=False)}\r\n"
+        LSP_SERVER,
+        f"Settings used to run Server:\r\n{json.dumps(settings, indent=4, ensure_ascii=False)}\r\n",
     )
     log_to_output(
-        f"Global settings:\r\n{json.dumps(GLOBAL_SETTINGS, indent=4, ensure_ascii=False)}\r\n"
+        LSP_SERVER,
+        f"Global settings:\r\n{json.dumps(GLOBAL_SETTINGS, indent=4, ensure_ascii=False)}\r\n",
     )
 
     # Add extra paths to sys.path
@@ -384,13 +359,14 @@ def did_change_configuration(ls, params: lsp.DidChangeConfigurationParams):
     settings = params.settings["jac"]
     _update_workspace_settings(settings)
     log_to_output(
-        f"Settings used to run Server:\r\n{json.dumps(settings, indent=4, ensure_ascii=False)}\r\n"
+        ls,
+        f"Settings used to run Server:\r\n{json.dumps(settings, indent=4, ensure_ascii=False)}\r\n",
     )
 
 
-# *****************************************************
 # Internal functional and settings management APIs.
-# *****************************************************
+
+
 def _get_global_defaults():
     return {
         "path": GLOBAL_SETTINGS.get("path", []),
@@ -440,35 +416,6 @@ def _get_settings_by_path(file_path: pathlib.Path):
     return setting_values[0]
 
 
-# *****************************************************
-# Logging and notification.
-# *****************************************************
-def log_to_output(
-    message: str, msg_type: lsp.MessageType = lsp.MessageType.Log
-) -> None:
-    LSP_SERVER.show_message_log(message, msg_type)
-
-
-def log_error(message: str) -> None:
-    LSP_SERVER.show_message_log(message, lsp.MessageType.Error)
-    if os.getenv("LS_SHOW_NOTIFICATION", "off") in ["onError", "onWarning", "always"]:
-        LSP_SERVER.show_message(message, lsp.MessageType.Error)
-
-
-def log_warning(message: str) -> None:
-    LSP_SERVER.show_message_log(message, lsp.MessageType.Warning)
-    if os.getenv("LS_SHOW_NOTIFICATION", "off") in ["onWarning", "always"]:
-        LSP_SERVER.show_message(message, lsp.MessageType.Warning)
-
-
-def log_always(message: str) -> None:
-    LSP_SERVER.show_message_log(message, lsp.MessageType.Info)
-    if os.getenv("LS_SHOW_NOTIFICATION", "off") in ["always"]:
-        LSP_SERVER.show_message(message, lsp.MessageType.Info)
-
-
-# *****************************************************
-# Start the server.
-# *****************************************************
+# Start the LSP Server
 if __name__ == "__main__":
     LSP_SERVER.start_io()

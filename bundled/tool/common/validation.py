@@ -3,8 +3,10 @@ from jaclang.jac.parser import JacParser
 from jaclang.jac.absyntree import JacSource
 from jaclang.jac.passes.blue import pass_schedule
 
-from lsprotocol.types import Diagnostic, DiagnosticSeverity, Position, Range
+from lsprotocol.types import Diagnostic, DiagnosticSeverity, Position, Range, WorkDoneProgressBegin, WorkDoneProgressEnd
 from pygls.server import LanguageServer
+
+import time
 
 
 def jac_to_errors(
@@ -40,8 +42,7 @@ def validate(ls: LanguageServer, params: any):
     Returns:
         list: A list of diagnostics found during validation.
     """
-    ls.show_message_log("Validating jac file...")
-
+    time.sleep(20)
     text_doc = ls.workspace.get_text_document(params.text_document.uri)
     source = text_doc.source
     doc_path = params.text_document.uri.replace("file://", "")

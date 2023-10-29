@@ -1,8 +1,9 @@
 """A Number Guessing Game"""
 
 import:py random;
+include:jac circle;
 
-
+"""Apple"""
 walker GuessGame {
     has correct_number: int = (1, 100) |> random.randint;
 
@@ -13,6 +14,9 @@ walker GuessGame {
 node turn {
     can check with GuessGame entry;
 }
+
+global RAD = 5, c = Circle(RAD);
+global s = Shape(ShapeType.CIRCLE);
 
 ::py::
 def add_one(x:int):
@@ -39,7 +43,6 @@ def add_one(x:int):
     }
     visit -->;
 }
-
 
 :walker:GuessGame:ability:process_guess (guess: int){
     if guess > <self>.correct_number {

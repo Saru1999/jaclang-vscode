@@ -13,7 +13,9 @@ from lsprotocol.types import (
 )
 
 from jaclang.jac.workspace import Workspace
-from jaclang.jac.absyntree import AstNode, AbilityDef, String
+from jaclang.jac.absyntree import AstNode, AbilityDef, String, Ability, Architype, HasVar
+
+from .logging import log_to_output
 
 
 def fill_workspace(ls: LanguageServer) -> None:
@@ -150,6 +152,27 @@ class Symbol:
                 ),
             ),
         )
+        self.children = self._get_children(self.ws_symbol.decl)
+
+    def _get_children(self, node: AstNode) -> List:
+        children = []
+        if isinstance(node, Architype):
+            kid_nodes = node.get_all_sub_nodes(HasVar)
+            kid_nodes.extend(node.get_all_sub_nodes(Ability))
+            for kid in kid_nodes:
+                children.append(
+                    Symbol(
+                        doc_uri=f"file://{os.path.join(os.getcwd(), node.loc.mod_path)}",
+                        node=kid
+                    )
+                )
+        return children
+
+    def __repr__(self) -> str:
+        return f"{self.sym_name} ({self.sym_type})"
+    
+    def __str__(self) -> str:
+        return self.__repr__()
 
 
 def get_doc_symbols(ls: LanguageServer, doc_uri: str) -> List[Symbol]:
@@ -210,3 +233,24 @@ def _get_symbol_kind(architype: str) -> SymbolKind:
         "enum_member": SymbolKind.EnumMember,
     }
     return architype_map.get(architype, SymbolKind.Variable)
+
+def get_symbol_by_name(name:str, symbol_list: List[Symbol], sym_type:str = "") -> Symbol:
+    """
+    Return the symbol with the given name from the given list of symbols
+
+    Parameters:
+    name (str): The name of the symbol to get
+    symbol_list (List[Symbol]): The list of symbols to search
+
+    Returns:
+    Symbol: The symbol with the given name
+    """
+    for symbol in symbol_list:
+        if symbol.sym_name == name and not symbol.is_use:
+            if sym_type:
+                if symbol.sym_type == sym_type:
+                    return symbol
+            else:
+                continue
+            return symbol
+    return None

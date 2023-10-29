@@ -20,7 +20,7 @@ Overall, the Jaclang Language Extension for VScode is a useful tool for develope
 | Syntax Highlighting | General Syntax Highlighting | ✅ |
 | | Python Block Syntax Highlighting | 🚧 |
 | Hover | "textDocument/hover" | ✅ |
-| Definition | | |
+| Definition | "textDocument/definition"| ✅ |
 | Error Diagnostics | "textDocument/diagnostic" | ✅ |
 | Auto-Formatting | "textDocument/formatting" | 🚧 |
 | | "textDocument/rangeFormatting" | 🚧 |
