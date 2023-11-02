@@ -9,6 +9,8 @@ import sys
 from lsprotocol.types import Position, Location, TextDocumentItem
 
 from .symbols import Symbol
+from .logging import log_to_output
+
 
 def as_list(content: Union[Any, List[Any], Tuple[Any]]) -> List[Any]:
     """Ensures we always get a list"""
@@ -124,3 +126,18 @@ def get_symbol_at_pos(doc: TextDocumentItem, pos: Position) -> Optional[Symbol]:
         if is_contained(sym.location, pos):
             return sym
     return None
+
+
+def get_relative_path(file_path, target_path):
+    file_path = pathlib.Path(file_path)
+    target_path = pathlib.Path(target_path)
+    return os.path.relpath(target_path, start=file_path.parent)
+
+
+def show_doc_info(ls, uri):
+    doc = ls.workspace.get_document(uri)
+    log_to_output(
+        ls,
+        f"""{'Symbols Attribute not found' if not hasattr(doc, 'symbols') else f'Symbols found: {len(doc.symbols)}'} 
+        {'Dependancies Attribute not found' if not hasattr(doc, 'dependencies') else f'Dependancies found: {len(doc.dependencies)}'}""",
+    )

@@ -10,4 +10,4 @@ def format_jac(doc_uri: str) -> str:
     prse = jac_file_to_pass(
         doc_url, target=JacFormatPass, schedule=format_pass_schedule
     )
-    return prse.ir.meta["jac_code"]
+    return prse.ir.gen.jac

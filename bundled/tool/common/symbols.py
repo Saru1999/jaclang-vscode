@@ -13,7 +13,14 @@ from lsprotocol.types import (
 )
 
 from jaclang.jac.workspace import Workspace
-from jaclang.jac.absyntree import AstNode, AbilityDef, String, Ability, Architype, HasVar
+from jaclang.jac.absyntree import (
+    AstNode,
+    AbilityDef,
+    String,
+    Ability,
+    Architype,
+    HasVar,
+)
 
 from .logging import log_to_output
 
@@ -76,7 +83,7 @@ def update_doc_deps(ls: LanguageServer, doc_uri: str) -> None:
     jlws_imports = ls.jlws.get_dependencies(doc_url)
     imports = [
         {
-            "path": i.path.path_str.replace(".", os.sep),
+            "path": f"{Path(doc_url).parent.joinpath(i.path.path_str.replace('.', os.sep))}.jac",
             "is_jac_import": i.lang.tag.value == "jac",
             "line": i.loc.first_line,
             "uri": f"file://{Path(doc_url).parent.joinpath(i.path.path_str.replace('.', os.sep))}.jac",
@@ -87,14 +94,12 @@ def update_doc_deps(ls: LanguageServer, doc_uri: str) -> None:
     ls.dep_table[doc_url] = [s for s in imports if s["is_jac_import"]]
     for dep in imports:
         if dep["is_jac_import"]:
-            import_file_path = (
-                f"{os.path.join(os.path.dirname(doc_url), dep['path'])}.jac"
-            )
-            dep_doc = ls.workspace.get_document(f"file://{import_file_path}")
+            log_to_output(ls, f"Importing {dep['path']} for {doc_url}")
+            dep_doc = ls.workspace.get_document(dep["uri"])
             if not hasattr(dep_doc, "symbols"):
                 update_doc_tree(ls, dep_doc.uri)
             dep_symbols = [s for s in dep_doc.symbols if not s.is_use]
-            doc.dependencies.update({dep["path"]: {"symbols": dep_symbols}})
+            doc.dependencies[dep["path"]] = {"symbols": dep_symbols}
         else:
             # TODO: Add support for python file imports
             pass
@@ -163,14 +168,14 @@ class Symbol:
                 children.append(
                     Symbol(
                         doc_uri=f"file://{os.path.join(os.getcwd(), node.loc.mod_path)}",
-                        node=kid
+                        node=kid,
                     )
                 )
         return children
 
     def __repr__(self) -> str:
         return f"{self.sym_name} ({self.sym_type})"
-    
+
     def __str__(self) -> str:
         return self.__repr__()
 
@@ -234,7 +239,10 @@ def _get_symbol_kind(architype: str) -> SymbolKind:
     }
     return architype_map.get(architype, SymbolKind.Variable)
 
-def get_symbol_by_name(name:str, symbol_list: List[Symbol], sym_type:str = "") -> Symbol:
+
+def get_symbol_by_name(
+    name: str, symbol_list: List[Symbol], sym_type: str = ""
+) -> Symbol:
     """
     Return the symbol with the given name from the given list of symbols
 

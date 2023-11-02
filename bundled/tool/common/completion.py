@@ -1,7 +1,6 @@
 import re
 import inspect
 import importlib
-import os
 from typing import Optional
 
 from pygls.server import LanguageServer
@@ -10,27 +9,12 @@ from lsprotocol.types import (
     CompletionItem,
     CompletionItemKind,
     InsertTextFormat,
-    Position,
 )
 
 from .constants import JAC_KW, PY_LIBS, SNIPPETS
 from .logging import log_to_output
 from .symbols import get_symbol_by_name
-
-DEFAULT_COMPLETION_ITEMS = [
-    CompletionItem(label=keyword, kind=CompletionItemKind.Keyword, **info)
-    for keyword, info in JAC_KW.items()
-] + [
-    CompletionItem(
-        label=snippet["label"],
-        kind=CompletionItemKind.Snippet,
-        detail=snippet["detail"],
-        documentation=snippet["documentation"],
-        insert_text=snippet["insert_text"],
-        insert_text_format=InsertTextFormat.Snippet,
-    )
-    for snippet in SNIPPETS
-]
+from .utils import get_relative_path
 
 
 def _get_completion_kind(sym_type: str) -> CompletionItemKind:
@@ -80,6 +64,7 @@ def get_completion_items(
     doc = ls.workspace.get_document(params.text_document.uri)
     line = doc.source.splitlines()[params.position.line]
     before_cursor = line[: params.position.character]
+    last_word = before_cursor.split()[-1] if len(before_cursor.split()) else ""
 
     completion_items = []
 
@@ -87,16 +72,20 @@ def get_completion_items(
     dep_symbols = (
         [
             symbol
-            for dep in doc.dependencies
-            for symbol in doc.dependencies[dep]["symbols"]
+            for module_info in doc.dependencies.values()
+            for symbol in module_info["symbols"]
         ]
         if hasattr(doc, "dependencies")
         else []
     )
+    doc_symbols = symbols + dep_symbols
 
+    """
+    eg- {node}. {walker}. {object}.
+    """
     if before_cursor.endswith("."):
-        last_symbol_name = before_cursor.split()[-1].split(".")[-1]
-        last_symbol = get_symbol_by_name(last_symbol_name, symbols + dep_symbols)
+        last_symbol_name = re.match(r"(\w+).", last_word).group(1)
+        last_symbol = get_symbol_by_name(last_symbol_name, doc_symbols)
         if last_symbol:
             for child in last_symbol.children:
                 completion_items.append(
@@ -109,9 +98,7 @@ def get_completion_items(
                 )
 
     if before_cursor.endswith(":"):
-        log_to_output(ls, "ENDS WITH COLON")
-        if before_cursor.count(":") == 1:
-            log_to_output(ls, "ONE COLON")
+        if before_cursor == ":":
             completion_items += [
                 CompletionItem(
                     label=f"{symbol.sym_name} ({symbol.sym_type})",
@@ -135,11 +122,12 @@ def get_completion_items(
                     insert_text="node:",
                 ),
             ]
-        if before_cursor.count(":") == 2:
-            """
-            eg- :walker:, :node:
-            """
-            sym_type = before_cursor.replace(":", "").split()[-1]
+        """
+        eg- :walker:, :node:
+        """
+        match = re.match(r":(\w+):", before_cursor)
+        if match:
+            sym_type = match.group(1)
             completion_items += [
                 CompletionItem(
                     label=f"{symbol.sym_name} ({symbol.sym_type})",
@@ -148,15 +136,15 @@ def get_completion_items(
                     insert_text=symbol.sym_name,
                 )
                 for symbol in symbols + dep_symbols
-                if symbol.sym_type == sym_type
-                if not symbol.is_use
+                if symbol.sym_type == sym_type and not symbol.is_use
             ]
-        if before_cursor.count(":") == 3:
-            """
-            eg- :walker:GuessGame:, :node:turn:"""
-            log_to_output(ls, "THREE COLONS")
-            sym_type = before_cursor.replace(":", " ").split()[-2]
-            sym_name = before_cursor.replace(":", " ").split()[-1]
+        """
+        eg- :walker:GuessGame:, :node:turn:
+        """
+        match = re.match(r":(\w+):(\w+):", before_cursor)
+        if match:
+            sym_type = match.group(1)
+            sym_name = match.group(2)
             symbol = get_symbol_by_name(sym_name, symbols + dep_symbols, sym_type)
             if symbol:
                 completion_items += [
@@ -167,14 +155,15 @@ def get_completion_items(
                         insert_text=f"ability:{child.sym_name}",
                     )
                     for child in symbol.children
-                    if child.sym_type == "ability"
+                    if child.sym_type == "ability" and not child.is_use
                 ]
-        if before_cursor.count(":") == 4:
-            """
-            eg- :walker:GuessGame:ability:"""
-            log_to_output(ls, "FOUR COLONS")
-            sym_type = before_cursor.split()[-1].split(":")[-3]
-            sym_name = before_cursor.split()[-1].split(":")[-2]
+        """
+        eg- :walker:GuessGame:ability:
+        """
+        match = re.match(r":(\w+):(\w+):ability:", before_cursor)
+        if match:
+            sym_type = match.group(1)
+            sym_name = match.group(2)
             symbol = get_symbol_by_name(sym_name, symbols + dep_symbols, sym_type)
             if symbol:
                 completion_items += [
@@ -185,51 +174,152 @@ def get_completion_items(
                         insert_text=child.sym_name,
                     )
                     for child in symbol.children
-                    if child.sym_type == "ability"
+                    if child.sym_type == "ability" and not child.is_use
                 ]
 
+    # Snippets at the start of the line
+    if params.position.character == 0:
+        completion_items += [
+            CompletionItem(
+                label=snippet["label"],
+                kind=CompletionItemKind.Snippet,
+                detail=snippet["detail"],
+                documentation=snippet["documentation"],
+                insert_text=snippet["insert_text"],
+                insert_text_format=InsertTextFormat.Snippet,
+            )
+            for snippet in SNIPPETS
+            if "at_start" in snippet["positions"]
+        ]
+
+    # Start of the line Keywords handling
+    """
+    'node', 'walker', ':node:', ':walker:', 'include:jac', 'import:py',
+    'import:py from','object', 'enum', 'can', 'test', 'with entry',
+    'global'
+    """
+    if params.position.character == 0:
+        completion_items += [
+            CompletionItem(
+                label=kw,
+                kind=CompletionItemKind.Keyword,
+                insert_text=JAC_KW[kw]["insert_text"],
+                documentation=JAC_KW[kw]["documentation"],
+            )
+            for kw in JAC_KW
+            if "at_start" in JAC_KW[kw]["positions"]
+        ]
+
+    # Hnadling Imports
+    """
+    1. include:jac {jac_files_in_workspace}
+    2. import:py {py_libs}
+    3. import:py from {py_libs}, {classes_and_functions_in_py_lib}
+    """
+    if before_cursor in ["import:py from ", "import:py "]:
+        completion_items += [
+            CompletionItem(
+                label=py_lib,
+                kind=CompletionItemKind.Module,
+                insert_text=py_lib,
+                documentation="",
+            )
+            for py_lib in PY_LIBS
+        ]
+    py_import_match = re.match(r"import:py from (\w+),", before_cursor)
+    if py_import_match:
+        py_module = py_import_match.group(1)
+        completion_items += [
+            CompletionItem(
+                label=name,
+                kind=CompletionItemKind.Function
+                if inspect.isfunction(obj)
+                else CompletionItemKind.Class,
+                documentation=obj.__doc__,
+            )
+            for name, obj in inspect.getmembers(importlib.import_module(py_module))
+        ]
+    if last_word == "include:jac":
+        for mod, mod_info in ls.jlws.modules.items():
+            rel_path = get_relative_path(doc.uri.replace("file://", ""), mod).replace(
+                ".jac", ""
+            )
+            text = (
+                rel_path.replace("/", "")
+                if rel_path.startswith("..")
+                else rel_path.replace("/", ".")
+            )
+            completion_items.append(
+                CompletionItem(
+                    label=text,
+                    kind=CompletionItemKind.File,
+                    insert_text=text,
+                    documentation=mod_info.ir.doc.value if mod_info.ir.doc else "",
+                )
+            )
+
+    # Snippets inside a node, walker, object
+    # checks if the last word is just spaces/tabs
+    if params.position.character > 0 and last_word == "":
+        completion_items += [
+            CompletionItem(
+                label=snippet["label"],
+                kind=CompletionItemKind.Snippet,
+                detail=snippet["detail"],
+                documentation=snippet["documentation"],
+                insert_text=snippet["insert_text"],
+                insert_text_format=InsertTextFormat.Snippet,
+            )
+            for snippet in SNIPPETS
+            if "inside" in snippet["positions"]
+        ]
+
+    # inside a node, walker, object, enum
+    """
+    walker {walker_name} {
+        has {var_name}: {var_type} ...;
+
+        can {ability_name} {...}
+        can {ability_name}( {var_name}: {var_type} );
+        with entry {...}
+        with exit {...}
+    }
+
+    node {node_name} {
+        has {var_name}: {var_type} ...;
+
+        can {ability_name} {...}
+        can {ability_name}( {var_name}: {var_type} );
+        can {ability_name} with {walker_name} entry;
+    }
+
+    object {Child}:{Super}: {
+        <super>.<init>(...);
+        has {var_name}: {var_type} ...;
+        can <init>;
+        can {ability_name} -> {return_type};
+    }
+
+    enum {enum_name} {
+        {enum_key} = {enum_value},
+    }
+    """
+
+    # inside a ability
+    """
+    can {ability_name} {
+        {everything else}
+        visit -->;
+    }
+    :(walker/node):{walker/node_name}:ability:{ability_name} {
+        {everything else}
+        visit -->;
+    }
+    """
+
+    # inside a python block
+    """
+    {normal python stuff}
+    """
+
     return completion_items
-
-    # last_word = before_cursor.split()[-1]
-
-    # # Import Completions
-    # # jac imports
-    # if last_word == "include:jac":
-    #     # getting all the jac files in the workspace
-    #     file_dir = os.path.dirname(params.text_document.uri.replace("file://", ""))
-    #     jac_imports = [
-    #         os.path.join(root.replace(file_dir, "."), file)
-    #         .replace(".jac", "")
-    #         .replace("/", ".")
-    #         .replace("..", "")
-    #         for root, _, files in os.walk(file_dir)
-    #         for file in files
-    #         if file.endswith(".jac")
-    #     ]
-    #     return [
-    #         CompletionItem(label=jac_import, kind=CompletionItemKind.Module)
-    #         for jac_import in jac_imports
-    #     ]
-
-    # # python imports
-    # if before_cursor in ["import:py from ", "import:py "]:
-    #     return [
-    #         CompletionItem(label=py_lib, kind=CompletionItemKind.Module)
-    #         for py_lib in PY_LIBS
-    #     ]
-    # # functions and classes in the imported python library
-    # py_import_match = re.match(r"import:py from (\w+),", before_cursor)
-    # if py_import_match:
-    #     py_module = py_import_match.group(1)
-    #     return [
-    #         CompletionItem(
-    #             label=name,
-    #             kind=CompletionItemKind.Function
-    #             if inspect.isfunction(obj)
-    #             else CompletionItemKind.Class,
-    #             documentation=obj.__doc__,
-    #         )
-    #         for name, obj in inspect.getmembers(importlib.import_module(py_module))
-    #     ]
-
-    # return DEFAULT_COMPLETION_ITEMS

@@ -22,6 +22,10 @@ object Circle:Shape: {
     can area -> float;
 }
 
+node example {
+    can awesome;
+}
+
 # Radius of the demo circle
 global RAD = 5, c = Circle(RAD);
 

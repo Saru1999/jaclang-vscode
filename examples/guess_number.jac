@@ -3,55 +3,56 @@
 import:py random;
 include:jac circle;
 
-"""Apple"""
-walker GuessGame {
-    has correct_number: int = (1, 100) |> random.randint;
 
+"""Apple"""
+walker GuessGame{
+    has correct_number: int = (1, 100) |> random.randint ;
     can start_game with <root> entry;
-    can process_guess(guess: int);
+    can process_guess(guess: int) -> None ;
 }
 
-node turn {
+
+node turn{
     can check with GuessGame entry;
 }
 
-global RAD = 5, c = Circle(RAD);
+global RAD = 5,c = Circle(RAD);
+
 global s = Shape(ShapeType.CIRCLE);
 
 ::py::
 def add_one(x:int):
     return x+1
 ::py::
-
-:node:turn:ability:check {
+:node:turn:ability:check{
     guess = "Guess a number between 1 and 100: " |> input;
-    if |> guess.isdigit() {
+    if |> guess.isdigit(){
         guess |> int |> <here>.process_guess;
-    } else {
+    }
+     else{
         "That's not a valid number! Try again." |> print;
     }
-
-    visit -->;
+    visit-->;
 }
 
-
-:walker:GuessGame:ability:start_game {
+:walker:GuessGame:ability:start_game{
     end = <here>;
-
-    for i = 0 to i < 10 by i += 1 {
+    for i = 0 to i < 10 by i = 1{
         end ++> end := :> turn();
     }
-    visit -->;
+    visit-->;
 }
 
-:walker:GuessGame:ability:process_guess (guess: int){
-    if guess > <self>.correct_number {
+:walker:GuessGame:ability:process_guess{
+    if guess > <self>.correct_number{
         "Too high!" |> print;
-    } elif guess < <self>.correct_number {
+    }
+     elif guess < <self>.correct_number{
         "Too low!" |> print;
-    } else {
+    }
+     else{
         "Congratulations! You guessed correctly." |> print;
-        disengage;;
+        disengage;
     }
 }
 

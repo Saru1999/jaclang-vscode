@@ -7,7 +7,12 @@ import pathlib
 from typing import Optional
 import copy
 
-from common.utils import normalize_path, update_sys_path, get_symbol_at_pos
+from common.utils import (
+    normalize_path,
+    update_sys_path,
+    get_symbol_at_pos,
+    show_doc_info,
+)
 
 
 # Ensure that we can import LSP libraries, and other bundled libraries.
@@ -51,39 +56,38 @@ LSP_SERVER = JacLanguageServer(
 # ************** Language Server features ********************
 
 
-# @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DID_CHANGE)
-# def did_change(ls, params: lsp.DidChangeTextDocumentParams):
-#     """
-#     Update the document tree and validate the changes made to the text document.
+@LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DID_CHANGE)
+def did_change(ls: server.LanguageServer, params: lsp.DidChangeTextDocumentParams):
+    """
+    Update the document tree and validate the changes made to the text document.
 
-#     Args:
-#         ls (LanguageServer): The language server instance.
-#         params (lsp.DidChangeTextDocumentParams): The parameters for the text document change.
-#     """
-#     diagnostics = validate(ls, params)
-#     ls.publish_diagnostics(params.text_document.uri, diagnostics)
-#     show_doc_info(ls, params.text_document.uri)
-#     if not diagnostics:
-#         update_doc_tree(ls, params.text_document.uri)
-#         update_doc_deps(ls, params.text_document.uri)
-#         ls.jlws.rebuild_file(params.text_document.uri.replace("file://", ""))
+    Args:
+        ls (LanguageServer): The language server instance.
+        params (lsp.DidChangeTextDocumentParams): The parameters for the text document change.
+    """
+    show_doc_info(ls, params.text_document.uri)
 
 
-# @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DID_SAVE)
-# def did_save(ls, params: lsp.DidSaveTextDocumentParams):
-#     """
-#     Updates the document tree and validates the saved text document.
+@LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DID_SAVE)
+def did_save(ls, params: lsp.DidSaveTextDocumentParams):
+    """
+    Updates the document tree and validates the saved text document.
 
-#     Args:
-#         ls (LanguageServer): The language server instance.
-#         params (lsp.DidSaveTextDocumentParams): The parameters for the saved text document.
-#     """
-#     diagnostics = validate(ls, params)
-#     ls.publish_diagnostics(params.text_document.uri, diagnostics)
-#     if not diagnostics:
-#         update_doc_tree(ls, params.text_document.uri)
-#         update_doc_deps(ls, params.text_document.uri)
-#         ls.jlws.rebuild_file(params.text_document.uri.replace("file://", ""))
+    Args:
+        ls (LanguageServer): The language server instance.
+        params (lsp.DidSaveTextDocumentParams): The parameters for the saved text document.
+    """
+    doc = ls.workspace.get_text_document(params.text_document.uri)
+    doc.version += 1
+
+    diagnostics = validate(ls, params, False, True)
+    ls.publish_diagnostics(params.text_document.uri, diagnostics)
+
+    if not diagnostics:
+        update_doc_tree(ls, params.text_document.uri)
+        update_doc_deps(ls, params.text_document.uri)
+
+    show_doc_info(ls, params.text_document.uri)
 
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DID_OPEN)
@@ -94,24 +98,15 @@ def did_open(ls: server.LanguageServer, params: lsp.DidOpenTextDocumentParams):
     """
     if not ls.workspace_filled:
         fill_workspace(ls)
-    # ls.publish_diagnostics(params.text_document.uri, validate(ls, params))
+
+    diagnostics = validate(ls, params)
+    ls.publish_diagnostics(params.text_document.uri, diagnostics)
+
+    if not diagnostics:
+        update_doc_tree(ls, params.text_document.uri)
+        update_doc_deps(ls, params.text_document.uri)
+
     show_doc_info(ls, params.text_document.uri)
-
-
-def show_doc_info(ls, uri):
-    doc = ls.workspace.get_document(uri)
-    if not hasattr(doc, "symbols"):
-        log_to_output(ls, "No symbols found")
-    else:
-        for symbol in doc.symbols:
-            log_to_output(ls, "Symbols found")
-            log_to_output(ls, str(doc.symbols))
-
-    if not hasattr(doc, "dependancies"):
-        log_to_output(ls, "No dependancies found")
-    else:
-        log_to_output(ls, "Dependancies found")
-        log_to_output(ls, str(doc.dependancies))
 
 
 # Handle File Operations
@@ -131,7 +126,6 @@ def did_create_files(ls: server.LanguageServer, params: lsp.CreateFilesParams):
         ls (LanguageServer): The language server instance.
         params (lsp.CreateFilesParams): The parameters for the file creation.
     """
-    ls.workspace_filled = False
     fill_workspace(ls)
 
 
@@ -195,7 +189,6 @@ def did_delete_files(ls: server.LanguageServer, params: lsp.DeleteFilesParams):
                             lsp.MessageType.Warning,
                         )
                         del ls.dep_table[doc]
-    ls.workspace_filled = False
     fill_workspace(ls)
 
 
@@ -225,36 +218,37 @@ async def did_open(ls, params: lsp.DidChangeNotebookDocumentParams):
 # Features
 
 
-# @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_FORMATTING)
-# def formatting(ls, params: lsp.DocumentFormattingParams):
-#     """
-#     TODO: Selective Formatting needs to be implemented
-#     Formats the document.
+@LSP_SERVER.feature(lsp.TEXT_DOCUMENT_FORMATTING)
+def formatting(ls, params: lsp.DocumentFormattingParams):
+    """
+    TODO: Selective Formatting needs to be implemented
+    Formats the document.
 
-#     :param ls: The language server instance.
-#     :type ls: lsp.LanguageServer
-#     :param params: The document formatting parameters.
-#     :type params: lsp.DocumentFormattingParams
-#     :return: A list of text edits to apply to the document.
-#     :rtype: List[lsp.TextEdit]
-#     """
-#     doc_uri = params.text_document.uri
-#     formatted_text = format_jac(doc_uri)
-#     return [
-#         lsp.TextEdit(
-#             range=lsp.Range(
-#                 start=lsp.Position(line=0, character=0),
-#                 end=lsp.Position(line=len(formatted_text), character=0),
-#             ),
-#             new_text=formatted_text,
-#         )
-#     ]
+    :param ls: The language server instance.
+    :type ls: lsp.LanguageServer
+    :param params: The document formatting parameters.
+    :type params: lsp.DocumentFormattingParams
+    :return: A list of text edits to apply to the document.
+    :rtype: List[lsp.TextEdit]
+    """
+    doc_uri = params.text_document.uri
+    formatted_text = format_jac(doc_uri)
+    return [
+        lsp.TextEdit(
+            range=lsp.Range(
+                start=lsp.Position(line=0, character=0),
+                end=lsp.Position(line=len(formatted_text), character=0),
+            ),
+            new_text=formatted_text,
+        )
+    ]
 
 
-@LSP_SERVER.feature(lsp.TEXT_DOCUMENT_COMPLETION)
+@LSP_SERVER.feature(
+    lsp.TEXT_DOCUMENT_COMPLETION, lsp.CompletionOptions(trigger_characters=[".", ":"])
+)
 def completions(params: Optional[lsp.CompletionParams] = None) -> lsp.CompletionList:
     """
-    TODO: More intelligent completions
     Returns a list of completion items for the given completion parameters.
 
     :param params: The completion parameters.
@@ -263,7 +257,7 @@ def completions(params: Optional[lsp.CompletionParams] = None) -> lsp.Completion
     :rtype: lsp.CompletionList
     """
     completion_items = get_completion_items(LSP_SERVER, params)
-    return lsp.CompletionList(is_incomplete=True, items=completion_items)
+    return lsp.CompletionList(is_incomplete=False, items=completion_items)
 
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DEFINITION)
