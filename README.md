@@ -14,15 +14,15 @@ Overall, the Jaclang Language Extension for VScode is a useful tool for develope
 
 | Feature | LSP Methods | Status |
 | ------- | ---------- | ------ |
-| Auto-Completion | "textDocument/completion" | 🚧 |
+| Auto-Completion | "textDocument/completion" | ✅ |
 | | "textDocument/inlineCompletion" | 🚧 |
-| Snippets | | |
+| Snippets | "textDocument/completion" | ✅ |
 | Syntax Highlighting | General Syntax Highlighting | ✅ |
 | | Python Block Syntax Highlighting | 🚧 |
 | Hover | "textDocument/hover" | ✅ |
 | Definition | "textDocument/definition"| ✅ |
 | Error Diagnostics | "textDocument/diagnostic" | ✅ |
-| Auto-Formatting | "textDocument/formatting" | 🚧 |
+| Auto-Formatting | "textDocument/formatting" | ✅ |
 | | "textDocument/rangeFormatting" | 🚧 |
 | | "textDocument/rangesFormatting" | 🚧 |
 | File Handling | "textDocument/didOpen" | ✅ |

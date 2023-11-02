@@ -11,7 +11,6 @@ walker GuessGame{
     can process_guess(guess: int) -> None ;
 }
 
-
 node turn{
     can check with GuessGame entry;
 }
@@ -24,6 +23,7 @@ global s = Shape(ShapeType.CIRCLE);
 def add_one(x:int):
     return x+1
 ::py::
+
 :node:turn:ability:check{
     guess = "Guess a number between 1 and 100: " |> input;
     if |> guess.isdigit(){
