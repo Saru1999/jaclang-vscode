@@ -23,7 +23,7 @@ object Circle:Shape: {
 }
 
 node example {
-    can awesome;
+    can awesome (apple: int);
 }
 
 # Radius of the demo circle

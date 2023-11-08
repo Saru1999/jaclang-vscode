@@ -159,7 +159,16 @@ class Symbol:
         return DocumentSymbol(
             name=self.sym_name,
             kind=self.sym_info.kind,
-            range=self.sym_info.location.range,
+            range=Range(
+                    start=Position(
+                        line=self.node.loc.first_line - 1,
+                        character=self.node.loc.col_start - 1,
+                    ),
+                    end=Position(
+                        line=self.node.loc.last_line - 1,
+                        character=self.node.loc.col_end - 1,
+                    ),
+                ),
             selection_range=self.sym_info.location.range,
             detail=self.sym_doc,
             children=self._get_children_doc_sym(),
