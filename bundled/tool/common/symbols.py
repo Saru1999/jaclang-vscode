@@ -2,39 +2,25 @@ import os
 from pathlib import Path
 from typing import List
 
-from lsprotocol.types import Position, Range
 from pygls.server import LanguageServer
 from lsprotocol.types import (
     TextDocumentItem,
     SymbolInformation,
     SymbolKind,
+    Range,
+    Position,
     Location,
     DocumentSymbol,
 )
 
 from jaclang.jac.workspace import Workspace
-from jaclang.jac.absyntree import (
-    AstNode,
-    AbilityDef,
-    String,
-    Ability,
-    Architype,
-    HasVar,
-)
+from jaclang.jac.absyntree import AstNode, String, Ability, Architype, HasVar, ParamVar
+from jaclang.jac.symtable import SymbolTable
 
 from .logging import log_to_output
 
 
 def fill_workspace(ls: LanguageServer) -> None:
-    """
-    Fills the workspace with the modules and their dependencies.
-
-    Args:
-        ls (LanguageServer): The LanguageServer instance.
-
-    Returns:
-        None
-    """
     ls.jlws = Workspace(path=ls.workspace.root_path)
     for mod_path, mod_info in ls.jlws.modules.items():
         doc = TextDocumentItem(
@@ -51,31 +37,11 @@ def fill_workspace(ls: LanguageServer) -> None:
 
 
 def update_doc_tree(ls: LanguageServer, doc_uri: str) -> None:
-    """
-    Updates the document tree with the symbols in the given document URI.
-
-    Args:
-        ls (LanguageServer): The language server instance.
-        doc_uri (str): The URI of the document to update.
-
-    Returns:
-        None
-    """
     doc = ls.workspace.get_document(doc_uri)
     doc.symbols = get_doc_symbols(ls, doc.uri)
 
 
 def update_doc_deps(ls: LanguageServer, doc_uri: str) -> None:
-    """
-    Update the dependencies of a document in the given LanguageServer instance.
-
-    Args:
-        ls (LanguageServer): The LanguageServer instance to use.
-        doc_uri (str): The URI of the document to update.
-
-    Returns:
-        None
-    """
     doc = ls.workspace.get_document(doc_uri)
     doc_url = doc.uri.replace("file://", "")
     doc.dependencies = {}
@@ -95,7 +61,7 @@ def update_doc_deps(ls: LanguageServer, doc_uri: str) -> None:
     for dep in imports:
         if dep["is_jac_import"]:
             log_to_output(ls, f"Importing {dep['path']} for {doc_url}")
-            dep_doc = ls.workspace.get_document(dep["uri"])
+            dep_doc = ls.workspace.get_text_document(dep["uri"])
             if not hasattr(dep_doc, "symbols"):
                 update_doc_tree(ls, dep_doc.uri)
             dep_symbols = [s for s in dep_doc.symbols if not s.is_use]
@@ -106,45 +72,37 @@ def update_doc_deps(ls: LanguageServer, doc_uri: str) -> None:
 
 
 class Symbol:
-    def __init__(self, doc_uri: str, node: AstNode, is_use: bool = False) -> None:
+    def __init__(self, node: SymbolTable | AstNode, doc_uri: str, is_use: bool = False):
+        if isinstance(node, SymbolTable):
+            self.sym_tab = node
         self.is_use = is_use
-        self.node = node
-        self.ws_symbol = self.node.sym_link
-        self.sym_info = SymbolInformation(
-            name=self.ws_symbol.sym_name,
-            kind=_get_symbol_kind(str(self.ws_symbol.sym_type)),
-            location=Location(
-                uri=doc_uri,
-                range=Range(
-                    start=Position(
-                        line=self.node.sym_name_node.loc.first_line - 1,
-                        character=self.node.sym_name_node.loc.col_start - 1,
-                    ),
-                    end=Position(
-                        line=self.node.sym_name_node.loc.last_line - 1,
-                        character=self.node.sym_name_node.loc.col_end - 1,
-                    ),
-                ),
-            ),
-        )
-        self.doc_sym = DocumentSymbol(
-            name=self.sym_info.name,
-            kind=self.sym_info.kind,
-            range=self.sym_info.location.range,
-            selection_range=self.sym_info.location.range,
-            detail="",
-            children=[],
-        )
-        self.sym_doc = (
+        self.node = node.owner if isinstance(node, SymbolTable) else node
+        self.doc_uri = doc_uri
+
+    @property
+    def sym_name(self):
+        return self.node.sym_name
+
+    @property
+    def ws_symbol(self):
+        return self.node.sym_link
+
+    @property
+    def sym_type(self):
+        return str(self.node.sym_type)
+
+    @property
+    def sym_doc(self):
+        return (
             self.ws_symbol.decl.doc.value[3:-3]
             if hasattr(self.ws_symbol.decl, "doc")
             and isinstance(self.ws_symbol.decl.doc, String)
             else ""
         )
-        self.sym_type = str(self.ws_symbol.sym_type)
-        self.sym_name = self.ws_symbol.sym_name
-        self.location = self.sym_info.location
-        self.defn_loc = Location(
+
+    @property
+    def defn_loc(self):
+        return Location(
             uri=f"file://{os.path.join(os.getcwd(), self.ws_symbol.decl.loc.mod_path)}",
             range=Range(
                 start=Position(
@@ -157,102 +115,109 @@ class Symbol:
                 ),
             ),
         )
-        self.children = self._get_children(self.ws_symbol.decl)
 
-    def _get_children(self, node: AstNode) -> List:
+    @property
+    def sym_info(self):
+        return SymbolInformation(
+            name=self.sym_name,
+            kind=self._get_symbol_kind(self.sym_type),
+            location=Location(
+                uri=self.doc_uri,
+                range=Range(
+                    start=Position(
+                        line=self.node.sym_name_node.loc.first_line - 1,
+                        character=self.node.sym_name_node.loc.col_start - 1,
+                    ),
+                    end=Position(
+                        line=self.node.sym_name_node.loc.last_line - 1,
+                        character=self.node.sym_name_node.loc.col_end - 1,
+                    ),
+                ),
+            ),
+        )
+
+    @property
+    def doc_sym(self):
+        return DocumentSymbol(
+            name=self.sym_name,
+            kind=self.sym_info.kind,
+            range=self.sym_info.location.range,
+            selection_range=self.sym_info.location.range,
+            detail=self.sym_doc,
+            children=self._get_children_doc_sym(),
+        )
+
+    @property
+    def location(self):
+        return self.sym_info.location
+
+    @property
+    def children(self):
         children = []
-        if isinstance(node, Architype):
-            kid_nodes = node.get_all_sub_nodes(HasVar)
-            kid_nodes.extend(node.get_all_sub_nodes(Ability))
-            for kid in kid_nodes:
-                children.append(
-                    Symbol(
-                        doc_uri=f"file://{os.path.join(os.getcwd(), node.loc.mod_path)}",
-                        node=kid,
-                    )
-                )
+        if hasattr(self, "sym_tab"):
+            for kid_sym_tab in self.sym_tab.kid:
+                kid_symbol = Symbol(kid_sym_tab, self.doc_uri)
+                children.append(kid_symbol)
+        vars = (
+            self.node.get_all_sub_nodes(HasVar)
+            if isinstance(self.node, Architype)
+            else self.node.get_all_sub_nodes(ParamVar)
+            if isinstance(self.node, Ability)
+            else []
+        )
+        for var in vars:
+            var_symbol = Symbol(var, self.doc_uri)
+            children.append(var_symbol)
         return children
 
-    def __repr__(self) -> str:
-        return f"{self.sym_name} ({self.sym_type})"
+    def _get_children_doc_sym(self):
+        children = []
+        for kid_symbol in self.children:
+            try:
+                children.append(kid_symbol.doc_sym)
+            except Exception:
+                pass
+        return children
 
-    def __str__(self) -> str:
-        return self.__repr__()
+    @staticmethod
+    def _get_symbol_kind(sym_type: str) -> SymbolKind:
+        sym_type_map = {
+            "mod": SymbolKind.Module,
+            "mod_var": SymbolKind.Variable,
+            "var": SymbolKind.Variable,
+            "immutable": SymbolKind.Variable,
+            "ability": SymbolKind.Function,
+            "object": SymbolKind.Class,
+            "node": SymbolKind.Class,
+            "edge": SymbolKind.Class,
+            "walker": SymbolKind.Class,
+            "enum": SymbolKind.Enum,
+            "test": SymbolKind.Function,
+            "type": SymbolKind.TypeParameter,
+            "impl": SymbolKind.Method,
+            "field": SymbolKind.Field,
+            "method": SymbolKind.Method,
+            "constructor": SymbolKind.Constructor,
+            "enum_member": SymbolKind.EnumMember,
+        }
+        return sym_type_map.get(sym_type, SymbolKind.Variable)
 
 
 def get_doc_symbols(ls: LanguageServer, doc_uri: str) -> List[Symbol]:
-    """
-    Returns a list of SymbolInformation objects representing the symbols defined in the given document.
-
-    Parameters:
-    ls (LanguageServer): The LanguageServer instance to use.
-    doc_uri (str): The URI of the document to analyze.
-    architypes (dict[str, list], optional): A dictionary mapping archetype names to lists of elements of that archetype. If not provided, it will be computed automatically. Defaults to None.
-    shift_lines (int, optional): The number of lines to shift the symbol positions by. Defaults to 0.
-
-    Returns:
-    List[SymbolInformation]: A list of SymbolInformation objects representing the symbols defined in the document.
-    """
     symbols: List[Symbol] = []
     doc_url = doc_uri.replace("file://", "")
-    # Symbol Definitions
-    defn_nodes = [
-        x for x in ls.jlws.get_definitions(doc_url) if x.loc.mod_path == doc_url
-    ]
-    uses_nodes = [x for x in ls.jlws.get_uses(doc_url) if x.loc.mod_path == doc_url]
-    for node in defn_nodes + uses_nodes:
-        if isinstance(node, AbilityDef):
-            continue
-        symbol = Symbol(doc_uri, node, True if node in uses_nodes else False)
-        symbols.append(symbol)
+    module = ls.jlws.modules[doc_url]
+    for sym_tab in module.ir.sym_tab.kid:
+        try:
+            symbols.append(Symbol(sym_tab, doc_uri))
+        except Exception as e:
+            log_to_output(ls, f"Error: {e}")
     return symbols
-
-
-def _get_symbol_kind(architype: str) -> SymbolKind:
-    """
-    Return the symbol kind of an architype
-
-    Parameters:
-    architype (str): The archetype of the symbol
-
-    Returns:
-    SymbolKind: The kind of symbol that corresponds to the archetype
-    """
-    architype_map = {
-        "mod": SymbolKind.Module,
-        "mod_var": SymbolKind.Variable,
-        "var": SymbolKind.Variable,
-        "immutable": SymbolKind.Variable,
-        "ability": SymbolKind.Function,
-        "object": SymbolKind.Class,
-        "node": SymbolKind.Class,
-        "edge": SymbolKind.Class,
-        "walker": SymbolKind.Class,
-        "enum": SymbolKind.Enum,
-        "test": SymbolKind.Function,
-        "type": SymbolKind.TypeParameter,
-        "impl": SymbolKind.Method,
-        "field": SymbolKind.Field,
-        "method": SymbolKind.Method,
-        "constructor": SymbolKind.Constructor,
-        "enum_member": SymbolKind.EnumMember,
-    }
-    return architype_map.get(architype, SymbolKind.Variable)
 
 
 def get_symbol_by_name(
     name: str, symbol_list: List[Symbol], sym_type: str = ""
 ) -> Symbol:
-    """
-    Return the symbol with the given name from the given list of symbols
-
-    Parameters:
-    name (str): The name of the symbol to get
-    symbol_list (List[Symbol]): The list of symbols to search
-
-    Returns:
-    Symbol: The symbol with the given name
-    """
     for symbol in symbol_list:
         if symbol.sym_name == name and not symbol.is_use:
             if sym_type:

@@ -2,12 +2,14 @@ from jaclang.jac.passes.blue import (
     JacFormatPass,
 )
 from jaclang.jac.transpiler import jac_file_to_pass
+import tempfile
 
 
-def format_jac(doc_uri: str) -> str:
+def format_jac(source: str) -> str:
     format_pass_schedule = [JacFormatPass]
-    doc_url = doc_uri.replace("file://", "")
-    prse = jac_file_to_pass(
-        doc_url, target=JacFormatPass, schedule=format_pass_schedule
-    )
-    return prse.ir.gen.jac
+    with tempfile.NamedTemporaryFile(suffix=".jac") as f:
+        f.write(source.encode("utf-8"))
+        f.flush()
+        return jac_file_to_pass(
+            f.name, target=JacFormatPass, schedule=format_pass_schedule
+        ).ir.gen.jac

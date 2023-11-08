@@ -4,25 +4,20 @@ import:py random;
 include:jac circle;
 
 
-"""Apple"""
+"""Apples"""
 walker GuessGame{
     has correct_number: int = (1, 100) |> random.randint ;
     can start_game with <root> entry;
     can process_guess(guess: int) -> None ;
 }
 
+
 node turn{
     can check with GuessGame entry;
 }
 
 global RAD = 5,c = Circle(RAD);
-
 global s = Shape(ShapeType.CIRCLE);
-
-::py::
-def add_one(x:int):
-    return x+1
-::py::
 
 :node:turn:ability:check{
     guess = "Guess a number between 1 and 100: " |> input;

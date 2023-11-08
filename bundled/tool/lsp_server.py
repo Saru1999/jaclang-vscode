@@ -5,7 +5,6 @@ import json
 import os
 import pathlib
 from typing import Optional
-import copy
 
 from common.utils import (
     normalize_path,
@@ -24,16 +23,19 @@ update_sys_path(
     os.getenv("LS_IMPORT_STRATEGY", "useBundled"),
 )
 
-import lsprotocol.types as lsp
-from pygls import server, uris
+import lsprotocol.types as lsp  # noqa: E402
+from pygls import server, uris  # noqa: E402
 
-
-from common.validation import validate
-from common.completion import get_completion_items
-from common.format import format_jac
-from common.symbols import fill_workspace, update_doc_tree, update_doc_deps
-from common.hover import get_hover_info
-from common.logging import log_to_output
+from common.validation import validate  # noqa: E402
+from common.completion import get_completion_items  # noqa: E402
+from common.format import format_jac  # noqa: E402
+from common.symbols import (  # noqa: E402
+    fill_workspace,
+    update_doc_tree,
+    update_doc_deps,
+)
+from common.hover import get_hover_info  # noqa: E402
+from common.logging import log_to_output  # noqa: E402
 
 
 class JacLanguageServer(server.LanguageServer):
@@ -82,7 +84,6 @@ def did_save(ls, params: lsp.DidSaveTextDocumentParams):
 
     diagnostics = validate(ls, params, False, True)
     ls.publish_diagnostics(params.text_document.uri, diagnostics)
-
     if not diagnostics:
         update_doc_tree(ls, params.text_document.uri)
         update_doc_deps(ls, params.text_document.uri)
@@ -196,22 +197,22 @@ def did_delete_files(ls: server.LanguageServer, params: lsp.DeleteFilesParams):
 
 
 @LSP_SERVER.feature(lsp.NOTEBOOK_DOCUMENT_DID_OPEN)
-async def did_open(ls, params: lsp.DidOpenNotebookDocumentParams):
+async def did_notebook_document_open(ls, params: lsp.DidOpenNotebookDocumentParams):
     pass
 
 
 @LSP_SERVER.feature(lsp.NOTEBOOK_DOCUMENT_DID_CLOSE)
-async def did_open(ls, params: lsp.DidCloseNotebookDocumentParams):
+async def did_notebook_document_close(ls, params: lsp.DidCloseNotebookDocumentParams):
     pass
 
 
 @LSP_SERVER.feature(lsp.NOTEBOOK_DOCUMENT_DID_SAVE)
-async def did_open(ls, params: lsp.DidSaveNotebookDocumentParams):
+async def did_notebook_document_save(ls, params: lsp.DidSaveNotebookDocumentParams):
     pass
 
 
 @LSP_SERVER.feature(lsp.NOTEBOOK_DOCUMENT_DID_CHANGE)
-async def did_open(ls, params: lsp.DidChangeNotebookDocumentParams):
+async def did_notebook_document_change(ls, params: lsp.DidChangeNotebookDocumentParams):
     pass
 
 
@@ -222,17 +223,10 @@ async def did_open(ls, params: lsp.DidChangeNotebookDocumentParams):
 def formatting(ls, params: lsp.DocumentFormattingParams):
     """
     TODO: Selective Formatting needs to be implemented
-    Formats the document.
-
-    :param ls: The language server instance.
-    :type ls: lsp.LanguageServer
-    :param params: The document formatting parameters.
-    :type params: lsp.DocumentFormattingParams
-    :return: A list of text edits to apply to the document.
-    :rtype: List[lsp.TextEdit]
     """
-    doc_uri = params.text_document.uri
-    formatted_text = format_jac(doc_uri)
+    doc = ls.workspace.get_text_document(params.text_document.uri)
+    source = doc.source
+    formatted_text = format_jac(source)
     return [
         lsp.TextEdit(
             range=lsp.Range(
@@ -248,16 +242,23 @@ def formatting(ls, params: lsp.DocumentFormattingParams):
     lsp.TEXT_DOCUMENT_COMPLETION, lsp.CompletionOptions(trigger_characters=[".", ":"])
 )
 def completions(params: Optional[lsp.CompletionParams] = None) -> lsp.CompletionList:
-    """
-    Returns a list of completion items for the given completion parameters.
-
-    :param params: The completion parameters.
-    :type params: Optional[lsp.CompletionParams]
-    :return: A list of completion items.
-    :rtype: lsp.CompletionList
-    """
     completion_items = get_completion_items(LSP_SERVER, params)
     return lsp.CompletionList(is_incomplete=False, items=completion_items)
+
+
+@LSP_SERVER.feature(lsp.TEXT_DOCUMENT_INLINE_COMPLETION)
+def inline_completions(ls, params: lsp.InlineCompletionParams):
+    pass
+
+
+@LSP_SERVER.feature(lsp.TEXT_DOCUMENT_INLAY_HINT)
+def inlay_hints(ls, params: lsp.InlayHintParams):
+    pass
+
+
+@LSP_SERVER.feature(lsp.TEXT_DOCUMENT_SIGNATURE_HELP)
+def signature_help(ls, params: lsp.SignatureHelpParams):
+    pass
 
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DEFINITION)
@@ -274,21 +275,12 @@ def definition(ls, params: lsp.DefinitionParams):
 def hover(ls, params: lsp.HoverParams):
     """
     TODO: Add More information to the hover
-    Returns information about the symbol at the specified position.
-
-    :param ls: The Language Server instance.
-    :type ls: LanguageServer
-    :param params: The HoverParams object containing the URI and position of the symbol.
-    :type params: lsp.HoverParams
-    :return: A Hover object with information about the symbol.
-    :rtype: lsp.Hover
     """
     uri = params.text_document.uri
     position = params.position
     lsp_document = ls.workspace.get_text_document(uri)
     if lsp_document is None:
         return None
-
     return get_hover_info(lsp_document, position)
 
 
@@ -313,7 +305,13 @@ def document_symbol(ls, params: lsp.DocumentSymbolParams):
     doc = ls.workspace.get_text_document(uri)
     if not hasattr(doc, "symbols"):
         update_doc_tree(ls, doc.uri)
-    return [s.doc_sym for s in doc.symbols]
+    doc_syms = []
+    for sym in doc.symbols:
+        try:
+            doc_syms.append(sym.doc_sym)
+        except AttributeError:
+            pass
+    return doc_syms
 
 
 # LSP Server Initialization

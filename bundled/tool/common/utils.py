@@ -122,7 +122,7 @@ def get_symbol_at_pos(doc: TextDocumentItem, pos: Position) -> Optional[Symbol]:
     :return: The symbol at the given position, or None if no symbol is found.
     :rtype: Optional[Symbol]
     """
-    for sym in doc.symbols:
+    for sym in get_all_symbols(doc):
         if is_contained(sym.location, pos):
             return sym
     return None
@@ -141,3 +141,13 @@ def show_doc_info(ls, uri):
         f"""{'Symbols Attribute not found' if not hasattr(doc, 'symbols') else f'Symbols found: {len(doc.symbols)}'} 
         {'Dependancies Attribute not found' if not hasattr(doc, 'dependencies') else f'Dependancies found: {len(doc.dependencies)}'}""",
     )
+
+def get_all_children(sym: Symbol) -> list[Symbol]:
+    for child in sym.children:
+        yield child
+        yield from get_all_children(child)
+
+def get_all_symbols(doc) -> list[Symbol]:
+    for sym in doc.symbols:
+        yield sym
+        yield from get_all_children(sym)
