@@ -14,8 +14,18 @@ from lsprotocol.types import (
 )
 
 from jaclang.jac.workspace import Workspace
-from jaclang.jac.absyntree import AstNode, String, Ability, Architype, HasVar, ParamVar
-from jaclang.jac.symtable import SymbolTable
+from jaclang.jac.absyntree import (
+    AstNode,
+    String,
+    Ability,
+    Architype,
+    HasVar,
+    ParamVar,
+    IfStmt,
+    WhileStmt,
+    WithStmt,
+)
+from jaclang.jac.symtable import SymbolTable, Symbol as JSymbol
 
 from .logging import log_to_output
 
@@ -72,11 +82,19 @@ def update_doc_deps(ls: LanguageServer, doc_uri: str) -> None:
 
 
 class Symbol:
-    def __init__(self, node: SymbolTable | AstNode, doc_uri: str, is_use: bool = False):
+    def __init__(
+        self, node: SymbolTable | AstNode | JSymbol, doc_uri: str, is_use: bool = False
+    ):
         if isinstance(node, SymbolTable):
             self.sym_tab = node
         self.is_use = is_use
-        self.node = node.owner if isinstance(node, SymbolTable) else node
+        self.node = (
+            node.owner
+            if isinstance(node, SymbolTable)
+            else node.decl
+            if isinstance(node, JSymbol)
+            else node
+        )
         self.doc_uri = doc_uri
 
     @property
@@ -156,6 +174,11 @@ class Symbol:
         children = []
         if hasattr(self, "sym_tab"):
             for kid_sym_tab in self.sym_tab.kid:
+                if isinstance(kid_sym_tab.owner, (IfStmt, WhileStmt, WithStmt)):
+                    for kid_sym in kid_sym_tab.tab.values():
+                        kid_symbol = Symbol(kid_sym, self.doc_uri)
+                        children.append(kid_symbol)
+                    continue
                 kid_symbol = Symbol(kid_sym_tab, self.doc_uri)
                 children.append(kid_symbol)
         vars = (
@@ -208,10 +231,11 @@ def get_doc_symbols(ls: LanguageServer, doc_uri: str) -> List[Symbol]:
     doc_url = doc_uri.replace("file://", "")
     module = ls.jlws.modules[doc_url]
     for sym_tab in module.ir.sym_tab.kid:
-        try:
-            symbols.append(Symbol(sym_tab, doc_uri))
-        except Exception as e:
-            log_to_output(ls, f"Error: {e}")
+        symbols.append(Symbol(sym_tab, doc_uri))
+    for sym in module.ir.sym_tab.tab.values():
+        if str(sym.sym_type) != "var":
+            continue
+        symbols.append(Symbol(sym, doc_uri))
     return symbols
 
 

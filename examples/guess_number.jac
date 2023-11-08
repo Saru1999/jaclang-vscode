@@ -17,11 +17,13 @@ node turn{
 }
 
 global RAD = 5,c = Circle(RAD);
+
 global s = Shape(ShapeType.CIRCLE);
 
 :node:turn:ability:check{
     guess = "Guess a number between 1 and 100: " |> input;
     if |> guess.isdigit(){
+        a = 1;
         guess |> int |> <here>.process_guess;
     }
      else{
@@ -30,7 +32,7 @@ global s = Shape(ShapeType.CIRCLE);
     visit-->;
 }
 
-:walker:GuessGame:ability:start_game{
+:walker:GuessGame:ability:start_game {
     end = <here>;
     for i = 0 to i < 10 by i = 1{
         end ++> end := :> turn();
@@ -46,7 +48,8 @@ global s = Shape(ShapeType.CIRCLE);
         "Too low!" |> print;
     }
      else{
-        "Congratulations! You guessed correctly." |> print;
+        "Congratulations! You guessed correctly." |> print
+        ;
         disengage;
     }
 }
