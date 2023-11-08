@@ -24,6 +24,8 @@ from jaclang.jac.absyntree import (
     IfStmt,
     WhileStmt,
     WithStmt,
+    IterForStmt,
+    ModuleCode,
 )
 from jaclang.jac.symtable import SymbolTable, Symbol as JSymbol
 
@@ -160,15 +162,15 @@ class Symbol:
             name=self.sym_name,
             kind=self.sym_info.kind,
             range=Range(
-                    start=Position(
-                        line=self.node.loc.first_line - 1,
-                        character=self.node.loc.col_start - 1,
-                    ),
-                    end=Position(
-                        line=self.node.loc.last_line - 1,
-                        character=self.node.loc.col_end - 1,
-                    ),
+                start=Position(
+                    line=self.node.loc.first_line - 1,
+                    character=self.node.loc.col_start - 1,
                 ),
+                end=Position(
+                    line=self.node.loc.last_line - 1,
+                    character=self.node.loc.col_end - 1,
+                ),
+            ),
             selection_range=self.sym_info.location.range,
             detail=self.sym_doc,
             children=self._get_children_doc_sym(),
@@ -183,7 +185,10 @@ class Symbol:
         children = []
         if hasattr(self, "sym_tab"):
             for kid_sym_tab in self.sym_tab.kid:
-                if isinstance(kid_sym_tab.owner, (IfStmt, WhileStmt, WithStmt)):
+                if isinstance(
+                    kid_sym_tab.owner,
+                    (IfStmt, WhileStmt, WithStmt, IterForStmt),
+                ):
                     for kid_sym in kid_sym_tab.tab.values():
                         kid_symbol = Symbol(kid_sym, self.doc_uri)
                         children.append(kid_symbol)
@@ -240,6 +245,8 @@ def get_doc_symbols(ls: LanguageServer, doc_uri: str) -> List[Symbol]:
     doc_url = doc_uri.replace("file://", "")
     module = ls.jlws.modules[doc_url]
     for sym_tab in module.ir.sym_tab.kid:
+        if isinstance(sym_tab.owner, ModuleCode):
+            continue
         symbols.append(Symbol(sym_tab, doc_uri))
     for sym in module.ir.sym_tab.tab.values():
         if str(sym.sym_type) != "var":
