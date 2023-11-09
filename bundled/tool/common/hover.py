@@ -7,12 +7,13 @@ from lsprotocol.types import (
     MarkupContent,
     MarkupKind,
 )
+from pygls.server import LanguageServer
 
 from .symbols import Symbol
 from .utils import get_symbol_at_pos
 
 
-def get_hover_info(doc: TextDocumentItem, pos: Position) -> Optional[Hover]:
+def get_hover_info(ls: LanguageServer, doc: TextDocumentItem, pos: Position) -> Optional[Hover]:
     """
     Returns the hover information for the symbol at the given position.
 
@@ -23,7 +24,7 @@ def get_hover_info(doc: TextDocumentItem, pos: Position) -> Optional[Hover]:
     :return: The hover information for the symbol at the given position, or None if no symbol is found.
     :rtype: Optional[Hover]
     """
-    symbol: Symbol = get_symbol_at_pos(doc, pos)
+    symbol: Symbol = get_symbol_at_pos(ls, doc, pos)
     if symbol is not None:
         return Hover(
             contents=MarkupContent(

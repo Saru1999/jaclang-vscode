@@ -266,7 +266,7 @@ def definition(ls, params: lsp.DefinitionParams):
     doc = ls.workspace.get_text_document(params.text_document.uri)
     if not hasattr(doc, "symbols"):
         update_doc_tree(ls, doc.uri)
-    symbol = get_symbol_at_pos(doc, params.position)
+    symbol = get_symbol_at_pos(ls, doc, params.position)
     if symbol is not None:
         return symbol.defn_loc
 
@@ -281,7 +281,7 @@ def hover(ls, params: lsp.HoverParams):
     lsp_document = ls.workspace.get_text_document(uri)
     if lsp_document is None:
         return None
-    return get_hover_info(lsp_document, position)
+    return get_hover_info(ls, lsp_document, position)
 
 
 # Symbol Handling

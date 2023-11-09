@@ -85,7 +85,10 @@ def update_doc_deps(ls: LanguageServer, doc_uri: str) -> None:
 
 class Symbol:
     def __init__(
-        self, node: SymbolTable | AstNode | JSymbol, doc_uri: str, is_use: bool = False
+        self,
+        node: SymbolTable | AstNode | JSymbol,
+        doc_uri: str,
+        is_use: "Symbol" = None,
     ):
         if isinstance(node, SymbolTable):
             self.sym_tab = node
@@ -206,6 +209,12 @@ class Symbol:
             var_symbol = Symbol(var, self.doc_uri)
             children.append(var_symbol)
         return children
+
+    def uses(self, ls: LanguageServer) -> List["Symbol"]:
+        for mod_url in ls.jlws.modules.keys():
+            for x in ls.jlws.get_uses(mod_url):
+                if x.sym_link == self.ws_symbol:
+                    yield Symbol(x, mod_url, is_use=self)
 
     def _get_children_doc_sym(self):
         children = []

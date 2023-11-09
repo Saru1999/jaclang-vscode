@@ -7,6 +7,7 @@ import site
 import sys
 
 from lsprotocol.types import Position, Location, TextDocumentItem
+from pygls.server import LanguageServer
 
 from .symbols import Symbol
 from .logging import log_to_output
@@ -111,7 +112,9 @@ def is_contained(sym_location: Location, hover_position: Position) -> bool:
     )
 
 
-def get_symbol_at_pos(doc: TextDocumentItem, pos: Position) -> Optional[Symbol]:
+def get_symbol_at_pos(
+    ls: LanguageServer, doc: TextDocumentItem, pos: Position
+) -> Optional[Symbol]:
     """
     Returns the symbol at the given position.
 
@@ -122,7 +125,7 @@ def get_symbol_at_pos(doc: TextDocumentItem, pos: Position) -> Optional[Symbol]:
     :return: The symbol at the given position, or None if no symbol is found.
     :rtype: Optional[Symbol]
     """
-    for sym in get_all_symbols(doc):
+    for sym in get_all_symbols(ls, doc):
         if is_contained(sym.location, pos):
             return sym
     return None
@@ -142,12 +145,19 @@ def show_doc_info(ls, uri):
         {'Dependancies Attribute not found' if not hasattr(doc, 'dependencies') else f'Dependancies found: {len(doc.dependencies)}'}""",
     )
 
-def get_all_children(sym: Symbol) -> list[Symbol]:
+
+def get_all_children(ls: LanguageServer, sym: Symbol, return_uses:bool = False) -> list[Symbol]:
     for child in sym.children:
         yield child
-        yield from get_all_children(child)
+        if return_uses:
+            yield from child.uses(ls)
+        yield from get_all_children(ls, child)
 
-def get_all_symbols(doc) -> list[Symbol]:
+
+def get_all_symbols(ls: LanguageServer, doc: TextDocumentItem) -> list[Symbol]:
     for sym in doc.symbols:
+        if sym.sym_type == "impl":
+            continue
         yield sym
-        yield from get_all_children(sym)
+        yield from sym.uses(ls)
+        yield from get_all_children(ls, sym, True)
