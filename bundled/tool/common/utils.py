@@ -94,16 +94,6 @@ def update_sys_path(path_to_add: str, strategy: str) -> None:
 
 
 def is_contained(sym_location: Location, hover_position: Position) -> bool:
-    """
-    Returns True if the hover position is contained within the symbol location.
-
-    :param sym_location: The location of the symbol being checked.
-    :type sym_location: Location
-    :param hover_position: The position of the hover being checked.
-    :type hover_position: Position
-    :return: True if the hover position is contained within the symbol location, False otherwise.
-    :rtype: bool
-    """
     return (
         sym_location.range.start.line <= hover_position.line
         and sym_location.range.end.line >= hover_position.line
@@ -115,17 +105,9 @@ def is_contained(sym_location: Location, hover_position: Position) -> bool:
 def get_symbol_at_pos(
     ls: LanguageServer, doc: TextDocumentItem, pos: Position
 ) -> Optional[Symbol]:
-    """
-    Returns the symbol at the given position.
-
-    :param doc: The document to check.
-    :type doc: TextDocumentItem
-    :param pos: The position to check.
-    :type pos: Position
-    :return: The symbol at the given position, or None if no symbol is found.
-    :rtype: Optional[Symbol]
-    """
     for sym in get_all_symbols(ls, doc):
+        if sym.doc_uri != doc.uri:
+            continue
         if is_contained(sym.location, pos):
             return sym
     return None
@@ -154,10 +136,15 @@ def get_all_children(ls: LanguageServer, sym: Symbol, return_uses:bool = False) 
         yield from get_all_children(ls, child)
 
 
-def get_all_symbols(ls: LanguageServer, doc: TextDocumentItem) -> list[Symbol]:
+def get_all_symbols(ls: LanguageServer, doc: TextDocumentItem, include_dep:bool = True) -> list[Symbol]:
     for sym in doc.symbols:
         if sym.sym_type == "impl":
             continue
         yield sym
         yield from sym.uses(ls)
         yield from get_all_children(ls, sym, True)
+    if include_dep:
+        for dep in doc.dependencies.values():
+            for sym in dep["symbols"]:
+                yield sym
+                yield from sym.uses(ls)
