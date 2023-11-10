@@ -49,12 +49,12 @@ def fill_workspace(ls: LanguageServer) -> None:
 
 
 def update_doc_tree(ls: LanguageServer, doc_uri: str) -> None:
-    doc = ls.workspace.get_document(doc_uri)
+    doc = ls.workspace.get_text_document(doc_uri)
     doc.symbols = get_doc_symbols(ls, doc.uri)
 
 
 def update_doc_deps(ls: LanguageServer, doc_uri: str) -> None:
-    doc = ls.workspace.get_document(doc_uri)
+    doc = ls.workspace.get_text_document(doc_uri)
     doc_url = doc.uri.replace("file://", "")
     doc.dependencies = {}
 
@@ -76,8 +76,7 @@ def update_doc_deps(ls: LanguageServer, doc_uri: str) -> None:
             dep_doc = ls.workspace.get_text_document(dep["uri"])
             if not hasattr(dep_doc, "symbols"):
                 update_doc_tree(ls, dep_doc.uri)
-            dep_symbols = [s for s in dep_doc.symbols if not s.is_use]
-            doc.dependencies[dep["path"]] = {"symbols": dep_symbols}
+            doc.dependencies[dep["path"]] = {"symbols": dep_doc.symbols}
         else:
             # TODO: Add support for python file imports
             pass
@@ -185,7 +184,6 @@ class Symbol:
 
     @property
     def children(self):
-        children = []
         if hasattr(self, "sym_tab"):
             for kid_sym_tab in self.sym_tab.kid:
                 if isinstance(
@@ -194,10 +192,10 @@ class Symbol:
                 ):
                     for kid_sym in kid_sym_tab.tab.values():
                         kid_symbol = Symbol(kid_sym, self.doc_uri)
-                        children.append(kid_symbol)
+                        yield kid_symbol
                     continue
                 kid_symbol = Symbol(kid_sym_tab, self.doc_uri)
-                children.append(kid_symbol)
+                yield kid_symbol
         vars = (
             self.node.get_all_sub_nodes(HasVar)
             if isinstance(self.node, Architype)
@@ -207,8 +205,7 @@ class Symbol:
         )
         for var in vars:
             var_symbol = Symbol(var, self.doc_uri)
-            children.append(var_symbol)
-        return children
+            yield var_symbol
 
     def uses(self, ls: LanguageServer) -> List["Symbol"]:
         for mod_url in ls.jlws.modules.keys():
@@ -265,7 +262,7 @@ def get_doc_symbols(ls: LanguageServer, doc_uri: str) -> List[Symbol]:
 
 
 def get_symbol_by_name(
-    name: str, symbol_list: List[Symbol], sym_type: str = ""
+    name: str, symbol_list: List[Symbol], sym_type: str = None
 ) -> Symbol:
     for symbol in symbol_list:
         if symbol.sym_name == name and not symbol.is_use:

@@ -25,7 +25,39 @@ SNIPPETS = [
         "insert_text": "if ${1:condition}{\n    ${2:# body of the if statement}\n}",
         "positions": ["inside"],
     },
+]
 
+WALKER_SNIPPET = [
+    {
+        "label": "Has Variable",
+        "detail": "has {var_name}: {var_type} ...;",
+        "documentation": "Adds a variable to the walker.",
+        "insert_text": "has ${1:var_name}: ${2:var_type};",
+    },
+    {
+        "label": "Ability without arguments",
+        "detail": "can {ability_name} {...}",
+        "documentation": "Adds an ability to the walker.",
+        "insert_text": "can ${1:ability_name} {\n    ${2:# body of the ability}\n}",
+    },
+    {
+        "label": "Ability with arguments",
+        "detail": "can {ability_name}( {var_name}: {var_type} )",
+        "documentation": "Adds an ability to the walker.",
+        "insert_text": "can ${1:ability_name}( ${2:var_name}: ${3:var_type} ) {\n    ${4:# body of the ability}\n}",
+    },
+    {
+        "label": "Entry",
+        "detail": "with entry {...}",
+        "documentation": "Defines what happens when the walker enters a node.",
+        "insert_text": "with entry {\n    ${1:# body of the entry}\n}",
+    },
+    {
+        "label": "Exit",
+        "detail": "with exit {...}",
+        "documentation": "Defines what happens when the walker exits a node.",
+        "insert_text": "with exit {\n    ${1:# body of the exit}\n}",
+    },
 ]
 
 JAC_KW = {
@@ -61,7 +93,11 @@ JAC_KW = {
         "documentation": "enum",
         "positions": ["at_start"],
     },
-    "can": {"insert_text": "can", "documentation": "can", "positions": ["at_start", "inside"]},
+    "can": {
+        "insert_text": "can",
+        "documentation": "can",
+        "positions": ["at_start", "inside"],
+    },
     "test": {"insert_text": "test", "documentation": "test", "positions": ["at_start"]},
     "with entry": {
         "insert_text": "with entry",
@@ -102,7 +138,7 @@ JAC_KW = {
         "insert_text": "with",
         "documentation": "with",
         "positions": ["inside"],
-    }
+    },
 }
 
 PY_LIBS = [name for _, name, _ in pkgutil.iter_modules() if "_" not in name]

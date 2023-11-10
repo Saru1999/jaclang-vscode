@@ -11,10 +11,10 @@ from lsprotocol.types import (
     InsertTextFormat,
 )
 
-from .constants import JAC_KW, PY_LIBS, SNIPPETS
+from .constants import JAC_KW, PY_LIBS, SNIPPETS, WALKER_SNIPPET
 from .logging import log_to_output
 from .symbols import get_symbol_by_name
-from .utils import get_relative_path
+from .utils import get_relative_path, get_all_symbols, get_scope_at_pos
 
 
 def _get_completion_kind(sym_type: str) -> CompletionItemKind:
@@ -66,26 +66,16 @@ def get_completion_items(
     before_cursor = line[: params.position.character]
     last_word = before_cursor.split()[-1] if len(before_cursor.split()) else ""
 
-    completion_items = []
+    scope = get_scope_at_pos(ls, doc, params.position, get_all_symbols(ls, doc, False, True))
 
-    symbols = doc.symbols
-    dep_symbols = (
-        [
-            symbol
-            for module_info in doc.dependencies.values()
-            for symbol in module_info["symbols"]
-        ]
-        if hasattr(doc, "dependencies")
-        else []
-    )
-    doc_symbols = symbols + dep_symbols
+    completion_items = []
 
     """
     eg- {node}. {walker}. {object}.
     """
     if before_cursor.endswith("."):
         last_symbol_name = re.match(r"(\w+).", last_word).group(1)
-        last_symbol = get_symbol_by_name(last_symbol_name, doc_symbols)
+        last_symbol = get_symbol_by_name(last_symbol_name, get_all_symbols(ls, doc))
         if last_symbol:
             for child in last_symbol.children:
                 completion_items.append(
@@ -106,7 +96,7 @@ def get_completion_items(
                     documentation=symbol.sym_doc,
                     insert_text=f"{symbol.sym_type}:{symbol.sym_name}",
                 )
-                for symbol in symbols + dep_symbols
+                for symbol in get_all_symbols(ls, doc)
                 if symbol.sym_type == "walker" or symbol.sym_type == "node"
                 if not symbol.is_use
             ]
@@ -135,7 +125,7 @@ def get_completion_items(
                     documentation=symbol.sym_doc,
                     insert_text=symbol.sym_name,
                 )
-                for symbol in symbols + dep_symbols
+                for symbol in get_all_symbols(ls, doc)
                 if symbol.sym_type == sym_type and not symbol.is_use
             ]
         """
@@ -145,7 +135,7 @@ def get_completion_items(
         if match:
             sym_type = match.group(1)
             sym_name = match.group(2)
-            symbol = get_symbol_by_name(sym_name, symbols + dep_symbols, sym_type)
+            symbol = get_symbol_by_name(sym_name, get_all_symbols(ls, doc), sym_type)
             if symbol:
                 completion_items += [
                     CompletionItem(
@@ -164,7 +154,7 @@ def get_completion_items(
         if match:
             sym_type = match.group(1)
             sym_name = match.group(2)
-            symbol = get_symbol_by_name(sym_name, symbols + dep_symbols, sym_type)
+            symbol = get_symbol_by_name(sym_name, get_all_symbols(ls, doc), sym_type)
             if symbol:
                 completion_items += [
                     CompletionItem(
@@ -304,6 +294,10 @@ def get_completion_items(
         {enum_key} = {enum_value},
     }
     """
+    if scope.sym_type in ["node", "walker", "object", "enum"]:
+
+
+    
 
     # inside a ability
     """

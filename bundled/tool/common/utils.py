@@ -6,7 +6,7 @@ import sysconfig
 import site
 import sys
 
-from lsprotocol.types import Position, Location, TextDocumentItem
+from lsprotocol.types import Position, Range, TextDocumentItem
 from pygls.server import LanguageServer
 
 from .symbols import Symbol
@@ -93,12 +93,12 @@ def update_sys_path(path_to_add: str, strategy: str) -> None:
             sys.path.append(path_to_add)
 
 
-def is_contained(sym_location: Location, hover_position: Position) -> bool:
+def is_contained(sym_range: Range, hover_position: Position) -> bool:
     return (
-        sym_location.range.start.line <= hover_position.line
-        and sym_location.range.end.line >= hover_position.line
-        and sym_location.range.start.character <= hover_position.character
-        and sym_location.range.end.character >= hover_position.character
+        sym_range.start.line <= hover_position.line
+        and sym_range.end.line >= hover_position.line
+        and sym_range.start.character <= hover_position.character
+        and sym_range.end.character >= hover_position.character
     )
 
 
@@ -108,7 +108,7 @@ def get_symbol_at_pos(
     for sym in get_all_symbols(ls, doc):
         if sym.doc_uri != doc.uri:
             continue
-        if is_contained(sym.location, pos):
+        if is_contained(sym.location.range, pos):
             return sym
     return None
 
@@ -128,7 +128,9 @@ def show_doc_info(ls, uri):
     )
 
 
-def get_all_children(ls: LanguageServer, sym: Symbol, return_uses:bool = False) -> list[Symbol]:
+def get_all_children(
+    ls: LanguageServer, sym: Symbol, return_uses: bool = False
+) -> list[Symbol]:
     for child in sym.children:
         yield child
         if return_uses:
@@ -136,9 +138,11 @@ def get_all_children(ls: LanguageServer, sym: Symbol, return_uses:bool = False) 
         yield from get_all_children(ls, child)
 
 
-def get_all_symbols(ls: LanguageServer, doc: TextDocumentItem, include_dep:bool = True) -> list[Symbol]:
+def get_all_symbols(
+    ls: LanguageServer, doc: TextDocumentItem, include_dep: bool = True, include_impl: bool = False
+) -> list[Symbol]:
     for sym in doc.symbols:
-        if sym.sym_type == "impl":
+        if not include_impl and sym.sym_type == "impl":
             continue
         yield sym
         yield from sym.uses(ls)
@@ -148,3 +152,20 @@ def get_all_symbols(ls: LanguageServer, doc: TextDocumentItem, include_dep:bool 
             for sym in dep["symbols"]:
                 yield sym
                 yield from sym.uses(ls)
+
+
+def get_scope_at_pos(
+    ls: LanguageServer, doc: TextDocumentItem, pos: Position, symbols: list[Symbol]
+) -> Optional[Symbol]:
+    for sym in symbols:
+        if sym.doc_uri != doc.uri:
+            continue
+        if (
+            sym.doc_sym.range.start.line <= pos.line
+            and sym.doc_sym.range.end.line >= pos.line
+        ):
+            kid = get_scope_at_pos(ls, doc, pos, sym.children)
+            if kid:
+                return kid
+            return sym
+    return None

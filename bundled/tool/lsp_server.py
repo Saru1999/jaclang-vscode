@@ -238,9 +238,7 @@ def formatting(ls, params: lsp.DocumentFormattingParams):
     ]
 
 
-@LSP_SERVER.feature(
-    lsp.TEXT_DOCUMENT_COMPLETION, lsp.CompletionOptions(trigger_characters=[".", ":"])
-)
+@LSP_SERVER.feature(lsp.TEXT_DOCUMENT_COMPLETION)
 def completions(params: Optional[lsp.CompletionParams] = None) -> lsp.CompletionList:
     completion_items = get_completion_items(LSP_SERVER, params)
     return lsp.CompletionList(is_incomplete=False, items=completion_items)
@@ -248,16 +246,19 @@ def completions(params: Optional[lsp.CompletionParams] = None) -> lsp.Completion
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_INLINE_COMPLETION)
 def inline_completions(ls, params: lsp.InlineCompletionParams):
+    # https://www.youtube.com/watch?v=B89NXOqif-E
     pass
 
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_INLAY_HINT)
 def inlay_hints(ls, params: lsp.InlayHintParams):
+    # https://www.youtube.com/watch?v=uvrIFZYW7eg
     pass
 
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_SIGNATURE_HELP)
 def signature_help(ls, params: lsp.SignatureHelpParams):
+    # https://www.youtube.com/watch?v=vi2PLcLqVxI
     pass
 
 

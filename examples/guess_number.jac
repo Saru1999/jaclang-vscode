@@ -6,9 +6,10 @@ include:jac circle;
 
 """Apples"""
 walker GuessGame{
-    has correct_number: int = (1, 100) |> random.randint ;
+    has correct_number: int = (1, 100) |> random.randint;
     can start_game with <root> entry;
     can process_guess(guess: int) -> None ;
+
 }
 
 
@@ -20,36 +21,36 @@ global RAD = 5,c = Circle(RAD);
 
 global s = Shape(ShapeType.CIRCLE);
 
-:node:turn:ability:check{
+:node:turn:ability:check {
     guess = "Guess a number between 1 and 100: " |> input;
-    if |> guess.isdigit(){
+    if |> guess.isdigit() {
         a = 1;
         guess |> int |> <here>.process_guess;
-    }
-     else{
+    } else {
         "That's not a valid number! Try again." |> print;
     }
+
     visit-->;
 }
 
 :walker:GuessGame:ability:start_game {
     end = <here>;
-    for i = 0 to i < 10 by i = 1{
+    for i = 0 to i < 10 by i = 1 {
         end ++> end := :> turn();
     }
+    
     visit-->;
 }
 
-:walker:GuessGame:ability:process_guess{
-    if guess > <self>.correct_number{
+
+
+:walker:GuessGame:ability:process_guess {
+    if guess > <self>.correct_number {
         "Too high!" |> print;
-    }
-     elif guess < <self>.correct_number{
+    } elif guess < <self>.correct_number {
         "Too low!" |> print;
-    }
-     else{
-        "Congratulations! You guessed correctly." |> print
-        ;
+    } else {
+        "Congratulations! You guessed correctly." |> print;
         disengage;
     }
 }
