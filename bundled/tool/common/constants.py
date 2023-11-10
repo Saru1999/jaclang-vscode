@@ -60,6 +60,76 @@ WALKER_SNIPPET = [
     },
 ]
 
+ENUM_SNIPPETS = [
+        {
+            "label": "Enum Key Value",
+            "detail": "{enum_key} = {enum_value}",
+            "documentation": "Enum Key",
+            "insert_text": "${1:enum_key} = ${2:enum_value},",
+        },
+    ]
+
+
+NODE_SNIPPET = [
+    {
+        "label": "Has Variable",
+        "detail": "has {var_name}: {var_type} ...;",
+        "documentation": "Adds a variable to the node.",
+        "insert_text": "has ${1:var_name}: ${2:var_type};",
+    },
+    {
+        "label": "Ability without arguments",
+        "detail": "can {ability_name} {...}",
+        "documentation": "Adds an ability to the node.",
+        "insert_text": "can ${1:ability_name} {\n    ${2:# body of the ability}\n}",
+    },
+    {
+        "label": "Ability with arguments",
+        "detail": "can {ability_name}( {var_name}: {var_type} )",
+        "documentation": "Adds an ability to the node.",
+        "insert_text": "can ${1:ability_name}( ${2:var_name}: ${3:var_type} ) {\n    ${4:# body of the ability}\n}",
+    },
+    {
+        "label": "Entry",
+        "detail": "with entry {...}",
+        "documentation": "Defines what happens when the walker enters a node.",
+        "insert_text": "with entry {\n    ${1:# body of the entry}\n}",
+    },
+    {
+        "label": "Exit",
+        "detail": "with exit {...}",
+        "documentation": "Defines what happens when the walker exits a node.",
+        "insert_text": "with exit {\n    ${1:# body of the exit}\n}",
+    },
+]
+
+OBJECT_SNIPPETS = [
+    {
+        "label": "Constructor",
+        "detail": "can <init>",
+        "documentation": "Constructor",
+        "insert_text": "can <init> {\n    ${1:# body of the constructor}\n}",
+    },
+    {
+        "label": "Ability without arguments",
+        "detail": "can {ability_name} -> {return_type}",
+        "documentation": "Ability",
+        "insert_text": "can ${1:ability_name} -> ${2:return_type} {\n    ${3:# body of the ability}\n}",
+    },
+    {
+        "label": "Ability with arguments",
+        "detail": "can {ability_name}( {var_name}: {var_type} ) -> {return_type}",
+        "documentation": "Ability",
+        "insert_text": "can ${1:ability_name}( ${2:var_name}: ${3:var_type} ) -> ${4:return_type} {\n    ${5:# body of the ability}\n}",
+    },
+    {
+        "label": "Has Variable",
+        "detail": "has {var_name}: {var_type} ...;",
+        "documentation": "Adds a variable to the object.",
+        "insert_text": "has ${1:var_name}: ${2:var_type};",
+    },
+]
+
 JAC_KW = {
     "node": {"insert_text": "node", "documentation": "node", "positions": ["at_start"]},
     "walker": {

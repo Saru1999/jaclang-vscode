@@ -238,7 +238,7 @@ def formatting(ls, params: lsp.DocumentFormattingParams):
     ]
 
 
-@LSP_SERVER.feature(lsp.TEXT_DOCUMENT_COMPLETION)
+@LSP_SERVER.feature(lsp.TEXT_DOCUMENT_COMPLETION, lsp.CompletionOptions(trigger_characters=[".", ":", ""]))
 def completions(params: Optional[lsp.CompletionParams] = None) -> lsp.CompletionList:
     completion_items = get_completion_items(LSP_SERVER, params)
     return lsp.CompletionList(is_incomplete=False, items=completion_items)

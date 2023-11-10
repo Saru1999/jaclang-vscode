@@ -11,7 +11,7 @@ from lsprotocol.types import (
     InsertTextFormat,
 )
 
-from .constants import JAC_KW, PY_LIBS, SNIPPETS, WALKER_SNIPPET
+from .constants import JAC_KW, PY_LIBS, SNIPPETS, WALKER_SNIPPET, NODE_SNIPPET, ENUM_SNIPPETS, OBJECT_SNIPPETS
 from .logging import log_to_output
 from .symbols import get_symbol_by_name
 from .utils import get_relative_path, get_all_symbols, get_scope_at_pos
@@ -66,7 +66,7 @@ def get_completion_items(
     before_cursor = line[: params.position.character]
     last_word = before_cursor.split()[-1] if len(before_cursor.split()) else ""
 
-    scope = get_scope_at_pos(ls, doc, params.position, get_all_symbols(ls, doc, False, True))
+    scope_node = get_scope_at_pos(ls, doc, params.position, get_all_symbols(ls, doc, False, True))
 
     completion_items = []
 
@@ -294,10 +294,24 @@ def get_completion_items(
         {enum_key} = {enum_value},
     }
     """
-    if scope.sym_type in ["node", "walker", "object", "enum"]:
-
-
-    
+    SCOPE_SNIPPETS = {
+        "node": NODE_SNIPPET,
+        "walker": WALKER_SNIPPET,
+        "object": OBJECT_SNIPPETS,
+        "enum": ENUM_SNIPPETS,
+    }
+    if scope_node:
+        completion_items += [
+            CompletionItem(
+                label=snippet["label"],
+                kind=CompletionItemKind.Snippet,
+                detail=snippet["detail"],
+                documentation=snippet["documentation"],
+                insert_text=snippet["insert_text"],
+                insert_text_format=InsertTextFormat.Snippet,
+            )
+            for snippet in SCOPE_SNIPPETS[scope_node.sym_type]
+        ]
 
     # inside a ability
     """
