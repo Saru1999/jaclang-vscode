@@ -9,6 +9,6 @@
 # run the above commands manually.
 
 # Required packages
-pygls
+pygls==1.1.1
 packaging
 jaclang
