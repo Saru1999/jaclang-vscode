@@ -88,14 +88,11 @@ suite('Settings Tests', () => {
             const settings: ISettings = await getWorkspaceSettings('mypy', workspace1);
 
             assert.deepStrictEqual(settings.cwd, workspace1.uri.fsPath);
-            assert.deepStrictEqual(settings.args, []);
             assert.deepStrictEqual(settings.importStrategy, 'useBundled');
             assert.deepStrictEqual(settings.interpreter, []);
-            assert.deepStrictEqual(settings.path, []);
             assert.deepStrictEqual(settings.severity, DEFAULT_SEVERITY);
             assert.deepStrictEqual(settings.showNotifications, 'off');
             assert.deepStrictEqual(settings.workspace, workspace1.uri.toString());
-            assert.deepStrictEqual(settings.extraPaths, []);
 
             configMock.verifyAll();
             pythonConfigMock.verifyAll();
@@ -160,29 +157,11 @@ suite('Settings Tests', () => {
                 .verifiable(TypeMoq.Times.atLeastOnce());
 
             const settings: ISettings = await getWorkspaceSettings('mypy', workspace1, true);
-            assert.deepStrictEqual(settings.args, [
-                process.env.HOME || process.env.USERPROFILE,
-                workspace1.uri.fsPath,
-                workspace1.uri.fsPath,
-                process.cwd(),
-            ]);
-            assert.deepStrictEqual(settings.path, [
-                `${process.env.HOME || process.env.USERPROFILE}/bin/mypy`,
-                `${workspace1.uri.fsPath}/bin/mypy`,
-                `${workspace1.uri.fsPath}/bin/mypy`,
-                `${process.cwd()}/bin/mypy`,
-            ]);
             assert.deepStrictEqual(settings.interpreter, [
                 `${process.env.HOME || process.env.USERPROFILE}/bin/python`,
                 `${workspace1.uri.fsPath}/bin/python`,
                 `${workspace1.uri.fsPath}/bin/python`,
                 `${process.cwd()}/bin/python`,
-            ]);
-            assert.deepStrictEqual(settings.extraPaths, [
-                `${process.env.HOME || process.env.USERPROFILE}/lib/python`,
-                `${workspace1.uri.fsPath}/lib/python`,
-                `${workspace1.uri.fsPath}/lib/python`,
-                `${process.cwd()}/lib/python`,
             ]);
             assert.deepStrictEqual(settings.cwd, `${process.env.HOME || process.env.USERPROFILE}/bin`);
 
@@ -237,19 +216,11 @@ suite('Settings Tests', () => {
             const settings: ISettings = await getWorkspaceSettings('mypy', workspace1);
 
             assert.deepStrictEqual(settings.cwd, `${process.env.HOME || process.env.USERPROFILE}/bin`);
-            assert.deepStrictEqual(settings.args, []);
             assert.deepStrictEqual(settings.importStrategy, 'useBundled');
             assert.deepStrictEqual(settings.interpreter, []);
-            assert.deepStrictEqual(settings.path, []);
             assert.deepStrictEqual(settings.severity, DEFAULT_SEVERITY);
             assert.deepStrictEqual(settings.showNotifications, 'off');
             assert.deepStrictEqual(settings.workspace, workspace1.uri.toString());
-            assert.deepStrictEqual(settings.extraPaths, [
-                `${process.env.HOME || process.env.USERPROFILE}/lib/python`,
-                `${workspace1.uri.fsPath}/lib/python`,
-                `${workspace1.uri.fsPath}/lib/python`,
-                `${process.cwd()}/lib/python`,
-            ]);
 
             configMock.verifyAll();
             pythonConfigMock.verifyAll();

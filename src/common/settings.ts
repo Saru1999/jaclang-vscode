@@ -14,15 +14,12 @@ const DEFAULT_SEVERITY: Record<string, string> = {
 export interface ISettings {
     cwd: string;
     workspace: string;
-    args: string[];
     severity: Record<string, string>;
-    path: string[];
     interpreter: string[];
     importStrategy: string;
     showNotifications: string;
-    extraPaths: string[];
     reportingScope: string;
-    preferDaemon: boolean;
+    showWarning: boolean;
 }
 
 export function getExtensionSettings(namespace: string, includeInterpreter?: boolean): Promise<ISettings[]> {
@@ -51,23 +48,6 @@ function resolveVariables(value: string[], workspace?: WorkspaceFolder): string[
     });
 }
 
-function getArgs(namespace: string, workspace: WorkspaceFolder): string[] {
-    const config = getConfiguration(namespace, workspace.uri);
-    const args = config.get<string[]>('args', []);
-    return args;
-}
-
-function getPath(namespace: string, workspace: WorkspaceFolder): string[] {
-    const config = getConfiguration(namespace, workspace.uri);
-    const path = config.get<string[]>('path', []);
-
-    if (path.length > 0) {
-        return path;
-    }
-
-    return [];
-}
-
 function getCwd(namespace: string, workspace: WorkspaceFolder): string {
     const legacyConfig = getConfiguration('python', workspace.uri);
     const legacyCwd = legacyConfig.get<string>('linting.cwd');
@@ -80,15 +60,6 @@ function getCwd(namespace: string, workspace: WorkspaceFolder): string {
     return workspace.uri.fsPath;
 }
 
-function getExtraPaths(namespace: string, workspace: WorkspaceFolder): string[] {
-    const legacyConfig = getConfiguration('python', workspace.uri);
-    const legacyExtraPaths = legacyConfig.get<string[]>('analysis.extraPaths', []);
-
-    if (legacyExtraPaths.length > 0) {
-        traceLog('Using cwd from `python.analysis.extraPaths`.');
-    }
-    return legacyExtraPaths;
-}
 
 export function getInterpreterFromSetting(namespace: string, scope?: ConfigurationScope) {
     const config = getConfiguration(namespace, scope);
@@ -124,21 +95,16 @@ export async function getWorkspaceSettings(
         }
     }
 
-    const args = getArgs(namespace, workspace);
-    const mypyPath = getPath(namespace, workspace);
-    const extraPaths = getExtraPaths(namespace, workspace);
     const workspaceSetting = {
         cwd: getCwd(namespace, workspace),
         workspace: workspace.uri.toString(),
-        args: resolveVariables(args, workspace),
         severity: config.get<Record<string, string>>('severity', DEFAULT_SEVERITY),
-        path: resolveVariables(mypyPath, workspace),
         interpreter: resolveVariables(interpreter, workspace),
         importStrategy: config.get<string>('importStrategy', 'useBundled'),
         showNotifications: config.get<string>('showNotifications', 'off'),
-        extraPaths: resolveVariables(extraPaths, workspace),
         reportingScope: config.get<string>('reportingScope', 'file'),
-        preferDaemon: config.get<boolean>('preferDaemon', true),
+        showWarning: config.get<boolean>('showWarning', true),
+
     };
     return workspaceSetting;
 }
@@ -162,28 +128,24 @@ export async function getGlobalSettings(namespace: string, includeInterpreter?: 
     const setting = {
         cwd: process.cwd(),
         workspace: process.cwd(),
-        args: getGlobalValue<string[]>(config, 'args', []),
         severity: getGlobalValue<Record<string, string>>(config, 'severity', DEFAULT_SEVERITY),
-        path: getGlobalValue<string[]>(config, 'path', []),
         interpreter: interpreter ?? [],
         importStrategy: getGlobalValue<string>(config, 'importStrategy', 'useBundled'),
         showNotifications: getGlobalValue<string>(config, 'showNotifications', 'off'),
-        extraPaths: getGlobalValue<string[]>(config, 'extraPaths', []),
         reportingScope: config.get<string>('reportingScope', 'file'),
-        preferDaemon: config.get<boolean>('preferDaemon', true),
+        showWarning: getGlobalValue<boolean>(config, 'showWarning', true),
     };
     return setting;
 }
 
 export function checkIfConfigurationChanged(e: ConfigurationChangeEvent, namespace: string): boolean {
     const settings = [
-        `${namespace}.args`,
         `${namespace}.severity`,
-        `${namespace}.path`,
         `${namespace}.interpreter`,
         `${namespace}.importStrategy`,
         `${namespace}.showNotifications`,
         `${namespace}.reportingScope`,
+        `${namespace}.showWarning`,
     ];
     const changed = settings.map((s) => e.affectsConfiguration(s));
     return changed.includes(true);

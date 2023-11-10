@@ -6,8 +6,6 @@ from jaclang.jac.passes.blue import pass_schedule
 from lsprotocol.types import Diagnostic, DiagnosticSeverity, Position, Range
 from pygls.server import LanguageServer
 
-import time
-
 
 def jac_to_errors(
     file_path: str, source: str, schedule=pass_schedule
@@ -61,8 +59,8 @@ def _validate_jac(
             ls.jlws.modules[doc_path].errors,
             ls.jlws.modules[doc_path].warnings,
         )
-
-    for alert in errors:
+        warnings = warnings if ls.settings.get("showWarning") else []
+    for alert in errors + warnings:
         msg = alert.msg
         loc = alert.loc
         diagnostics.append(

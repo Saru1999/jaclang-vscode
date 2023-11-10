@@ -12,7 +12,7 @@ from lsprotocol.types import (
 )
 
 from .constants import JAC_KW, PY_LIBS, SNIPPETS, WALKER_SNIPPET, NODE_SNIPPET, ENUM_SNIPPETS, OBJECT_SNIPPETS
-from .logging import log_to_output
+# from .logging import log_to_output
 from .symbols import get_symbol_by_name
 from .utils import get_relative_path, get_all_symbols, get_scope_at_pos
 

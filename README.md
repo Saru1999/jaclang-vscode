@@ -12,9 +12,9 @@ Overall, the Jaclang Language Extension for VScode is a useful tool for develope
 ## Features
 
 
-| Feature | LSP Methods | Status |
-| ------- | ---------- | ------ |
-| Auto-Completion | "textDocument/completion" | ✅ |
+| Feature | LSP Methods | Status | Remarks |
+| ------- | ---------- | ------ | ------- |
+| Auto-Completion | "textDocument/completion" | ✅ | 
 | | "textDocument/inlineCompletion" | 🚧 |
 | Snippets | "textDocument/completion" | ✅ |
 | Syntax Highlighting | General Syntax Highlighting | ✅ |

@@ -67,7 +67,8 @@ def did_change(ls: server.LanguageServer, params: lsp.DidChangeTextDocumentParam
         ls (LanguageServer): The language server instance.
         params (lsp.DidChangeTextDocumentParams): The parameters for the text document change.
     """
-    show_doc_info(ls, params.text_document.uri)
+    diagnostics = validate(ls, params, True, False)
+    ls.publish_diagnostics(params.text_document.uri, diagnostics)
 
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DID_SAVE)
@@ -83,22 +84,25 @@ def did_save(ls, params: lsp.DidSaveTextDocumentParams):
     doc.version += 1
 
     diagnostics = validate(ls, params, False, True)
+    log_to_output(ls, f"Number of diagnostics: {len(diagnostics)}")
     ls.publish_diagnostics(params.text_document.uri, diagnostics)
     if not diagnostics:
         update_doc_tree(ls, params.text_document.uri)
         update_doc_deps(ls, params.text_document.uri)
 
-    show_doc_info(ls, params.text_document.uri)
-
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DID_OPEN)
-def did_open(ls: server.LanguageServer, params: lsp.DidOpenTextDocumentParams):
+async def did_open(ls: server.LanguageServer, params: lsp.DidOpenTextDocumentParams):
     """
     This function is called when a text document is opened in the client.
     It fills the workspace if it is not already filled and validates the parameters.
     """
+
     if not ls.workspace_filled:
-        fill_workspace(ls)
+        try:
+            fill_workspace(ls)
+        except Exception as e:
+            ls.show_message(f"Error: {e}", lsp.MessageType.Error)
 
     diagnostics = validate(ls, params)
     ls.publish_diagnostics(params.text_document.uri, diagnostics)
@@ -238,7 +242,10 @@ def formatting(ls, params: lsp.DocumentFormattingParams):
     ]
 
 
-@LSP_SERVER.feature(lsp.TEXT_DOCUMENT_COMPLETION, lsp.CompletionOptions(trigger_characters=[".", ":", ""]))
+@LSP_SERVER.feature(
+    lsp.TEXT_DOCUMENT_COMPLETION,
+    lsp.CompletionOptions(trigger_characters=[".", ":", ""]),
+)
 def completions(params: Optional[lsp.CompletionParams] = None) -> lsp.CompletionList:
     completion_items = get_completion_items(LSP_SERVER, params)
     return lsp.CompletionList(is_incomplete=False, items=completion_items)
@@ -338,11 +345,13 @@ def initialize(params: lsp.InitializeParams) -> None:
         f"Global settings:\r\n{json.dumps(GLOBAL_SETTINGS, indent=4, ensure_ascii=False)}\r\n",
     )
 
+    LSP_SERVER.settings = WORKSPACE_SETTINGS[os.getcwd()]
+    
+
     # Add extra paths to sys.path
     setting = _get_settings_by_path(pathlib.Path(os.getcwd()))
     for extra in setting.get("extraPaths", []):
         update_sys_path(extra, import_strategy)
-
     fill_workspace(LSP_SERVER)
 
 
@@ -350,7 +359,12 @@ def initialize(params: lsp.InitializeParams) -> None:
 def did_change_configuration(ls, params: lsp.DidChangeConfigurationParams):
     """LSP handler for didChangeConfiguration request."""
     settings = params.settings["jac"]
+    ls.show_message(
+        f"{WORKSPACE_SETTINGS.values()}",
+        lsp.MessageType.Info,
+    )
     _update_workspace_settings(settings)
+    ls.settings = WORKSPACE_SETTINGS[os.getcwd()]
     log_to_output(
         ls,
         f"Settings used to run Server:\r\n{json.dumps(settings, indent=4, ensure_ascii=False)}\r\n",

@@ -199,11 +199,6 @@ JAC_KW = {
         "documentation": "root",
         "positions": ["inside"],
     },
-    "can": {
-        "insert_text": "can",
-        "documentation": "can",
-        "positions": ["inside"],
-    },
     "with": {
         "insert_text": "with",
         "documentation": "with",
