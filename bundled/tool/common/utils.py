@@ -158,7 +158,7 @@ def get_scope_at_pos(
     ls: LanguageServer, doc: TextDocumentItem, pos: Position, symbols: list[Symbol]
 ) -> Optional[Symbol]:
     for sym in symbols:
-        if sym.doc_uri != doc.uri:
+        if sym.doc_uri != doc.uri or sym.ws_symbol is None:
             continue
         if (
             sym.doc_sym.range.start.line <= pos.line

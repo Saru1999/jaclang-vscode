@@ -61,7 +61,7 @@ def get_completion_items(
     Returns:
         list: A list of completion items.
     """
-    doc = ls.workspace.get_document(params.text_document.uri)
+    doc = ls.workspace.get_text_document(params.text_document.uri)
     line = doc.source.splitlines()[params.position.line]
     before_cursor = line[: params.position.character]
     last_word = before_cursor.split()[-1] if len(before_cursor.split()) else ""
@@ -310,7 +310,7 @@ def get_completion_items(
                 insert_text=snippet["insert_text"],
                 insert_text_format=InsertTextFormat.Snippet,
             )
-            for snippet in SCOPE_SNIPPETS[scope_node.sym_type]
+            for snippet in SCOPE_SNIPPETS.get(scope_node.sym_type, [])
         ]
 
     # inside a ability
@@ -329,5 +329,5 @@ def get_completion_items(
     """
     {normal python stuff}
     """
-
+    print(completion_items)
     return completion_items

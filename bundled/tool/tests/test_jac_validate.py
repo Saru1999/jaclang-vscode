@@ -6,7 +6,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import unittest
 from unittest.mock import MagicMock
 
-from lsp_utils import validate
+from common.validation import validate
 import lsprotocol.types as lsp
 
 
