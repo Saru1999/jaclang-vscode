@@ -11,14 +11,14 @@ from common.symbols import fill_workspace  # noqa: E402
 
 
 class TestGetCompletionItems(unittest.TestCase):
-    ls = MockLanguageServer("bundled/tool/tests/fixtures/completion")
+    ls = MockLanguageServer("bundled/tool/tests/fixtures")
     fill_workspace(ls)
 
     def test_empty_before_cursor(self):
         # Test when before_cursor is empty
         params = lsp.CompletionParams(
             text_document=lsp.TextDocumentIdentifier(
-                uri="file://bundled/tool/tests/fixtures/completion/main.jac"
+                uri="file://bundled/tool/tests/fixtures/main.jac"
             ),
             position=lsp.Position(line=15, character=0),
         )
@@ -29,7 +29,7 @@ class TestGetCompletionItems(unittest.TestCase):
         # Test when last_word is "include:jac"
         params = lsp.CompletionParams(
             text_document=lsp.TextDocumentIdentifier(
-                uri="file://bundled/tool/tests/fixtures/completion/main.jac"
+                uri="file://bundled/tool/tests/fixtures/main.jac"
             ),
             position=lsp.Position(line=3, character=12),
         )
@@ -47,7 +47,7 @@ class TestGetCompletionItems(unittest.TestCase):
         # Test when before_cursor is "import:py from "
         params = lsp.CompletionParams(
             text_document=lsp.TextDocumentIdentifier(
-                uri="file://bundled/tool/tests/fixtures/completion/main.jac"
+                uri="file://bundled/tool/tests/fixtures/main.jac"
             ),
             position=lsp.Position(line=3, character=10),
         )
@@ -64,7 +64,7 @@ class TestGetCompletionItems(unittest.TestCase):
         # Test when before_cursor is "import:py from module,"
         params = lsp.CompletionParams(
             text_document=lsp.TextDocumentIdentifier(
-                uri="file://bundled/tool/tests/fixtures/completion/main.jac"
+                uri="file://bundled/tool/tests/fixtures/main.jac"
             ),
             position=lsp.Position(line=3, character=21),
         )
