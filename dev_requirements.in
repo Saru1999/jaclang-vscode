@@ -8,4 +8,6 @@
 
 pip-tools
 nox
+pytest
 jaclang
+pygls==1.1.1
