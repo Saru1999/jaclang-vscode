@@ -50,7 +50,10 @@ def fill_workspace(ls: LanguageServer) -> None:
 
 def update_doc_tree(ls: LanguageServer, doc_uri: str) -> None:
     doc = ls.workspace.get_text_document(doc_uri)
-    doc.symbols = get_doc_symbols(ls, doc.uri)
+    try:
+        doc.symbols = get_doc_symbols(ls, doc.uri)
+    except Exception:
+        doc.symbols = []
 
 
 def update_doc_deps(ls: LanguageServer, doc_uri: str) -> None:

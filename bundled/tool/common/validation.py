@@ -26,7 +26,6 @@ def validate(
     diagnostics = (
         _validate_jac(ls, doc_path, source, use_source, rebuild) if source else []
     )
-    ls.publish_diagnostics(text_doc.uri, diagnostics)
     return diagnostics
 
 
@@ -59,7 +58,8 @@ def _validate_jac(
             ls.jlws.modules[doc_path].errors,
             ls.jlws.modules[doc_path].warnings,
         )
-        warnings = warnings if ls.settings.get("showWarning") else []
+        warnings = warnings if ls.settings.get("showWarning", False) else []
+        print(errors,warnings)
     for alert in errors + warnings:
         msg = alert.msg
         loc = alert.loc
@@ -67,9 +67,9 @@ def _validate_jac(
             Diagnostic(
                 range=Range(
                     start=Position(
-                        line=loc.first_line - 1, character=loc.col_start - 1
+                        line=loc.first_line , character=loc.col_start
                     ),
-                    end=Position(line=loc.last_line - 1, character=loc.col_end - 1),
+                    end=Position(line=loc.last_line, character=loc.col_end ),
                 ),
                 message=msg,
                 severity=DiagnosticSeverity.Error
