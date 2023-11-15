@@ -1,4 +1,4 @@
-name: Run Tests
+name: Language Server Tests
 
 on: [push, pull_request]
 
