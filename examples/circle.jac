@@ -6,7 +6,7 @@ the area of a circle in all of Jac's glory.
 import:py math;
 include:jac circle_impl;
 
-enum ShapeType 
+enum ShapeType ;
 can calculate_area(radius: float) -> float ;
 can main_run ;
 
@@ -33,6 +33,6 @@ node example{
 global RAD = 5,c = Circle(RAD);
 
 """Here we run the main program."""
-"""Here we run the main program."""withentry:__main__{
+with entry:__main__{
     main_run();
 }

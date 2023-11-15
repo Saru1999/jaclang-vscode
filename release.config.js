@@ -3,7 +3,7 @@ const config = {
     plugins: [
         '@semantic-release/commit-analyzer',
         '@semantic-release/release-notes-generator',
-        ['@semantic-release/github', { assets: [{ path: 'build/jaseci-extension.vsix', label: 'Jaseci Extension (VSIX)' }] }],
+        ['@semantic-release/github', { assets: [{ path: 'build/jaclang-extension.vsix', label: 'Jaclang Extension (VSIX)' }] }],
     ],
 };
 

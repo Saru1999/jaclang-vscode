@@ -1,12 +1,12 @@
 {
-    "name": "jaseci-extension",
-    "displayName": "Jaseci",
+    "name": "jaclang-extension",
+    "displayName": "Jac Language",
     "description": "%extension.description%",
     "version": "2023.9.0",
     "preview": true,
     "serverInfo": {
-        "name": "Jaseci",
-        "module": "jaseci"
+        "name": "Jaclang Language Server",
+        "module": "jaclang"
     },
     "publisher": "jaseci-labs",
     "license": "MIT",
@@ -68,7 +68,7 @@
     "contributes": {
         "configuration": {
             "properties": {
-                "jaseci.importStrategy": {
+                "jaclang.importStrategy": {
                     "default": "useBundled",
                     "markdownDescription": "%settings.importStrategy.description%",
                     "enum": [
@@ -82,7 +82,7 @@
                     "scope": "window",
                     "type": "string"
                 },
-                "jaseci.interpreter": {
+                "jaclang.interpreter": {
                     "default": [],
                     "markdownDescription": "%settings.interpreter.description%",
                     "scope": "resource",
@@ -91,7 +91,7 @@
                     },
                     "type": "array"
                 },
-                "jaseci.reportingScope": {
+                "jaclang.reportingScope": {
                     "default": "file",
                     "markdownDescription": "%settings.reportingScope.description%",
                     "enum": [
@@ -108,7 +108,7 @@
                         "experimental"
                     ]
                 },
-                "jaseci.severity": {
+                "jaclang.severity": {
                     "default": {
                         "error": "Error",
                         "note": "Information"
@@ -126,7 +126,7 @@
                     "scope": "resource",
                     "type": "object"
                 },
-                "jaseci.showNotifications": {
+                "jaclang.showNotifications": {
                     "default": "off",
                     "markdownDescription": "%settings.showNotifications.description%",
                     "enum": [
@@ -144,8 +144,8 @@
                     "scope": "machine",
                     "type": "string"
                 },
-                "jaseci.showWarnings": {
-                    "default": false,
+                "jaclang.showWarnings": {
+                    "default": true,
                     "markdownDescription": "%settings.showWarnings.description%",
                     "scope": "resource",
                     "type": "boolean"
@@ -157,6 +157,7 @@
                 "id": "jac",
                 "aliases": [
                     "Jaseci Programming Language",
+                    "Jac Language",
                     "jac"
                 ],
                 "extensions": [
@@ -179,8 +180,8 @@
         "commands": [
             {
                 "title": "%command.restartServer%",
-                "category": "Jaseci",
-                "command": "jaseci.restart"
+                "category": "Jaclang",
+                "command": "jaclang.restart"
             }
         ]
     },
