@@ -346,7 +346,6 @@ def initialize(params: lsp.InitializeParams) -> None:
     )
 
     LSP_SERVER.settings = WORKSPACE_SETTINGS[os.getcwd()]
-    
 
     # Add extra paths to sys.path
     setting = _get_settings_by_path(pathlib.Path(os.getcwd()))
