@@ -125,6 +125,12 @@ def tests(session: nox.Session) -> None:
     session.run("python -m pytest")
 
 
+@nox.session(python="3.12")
+def setup(session: nox.Session) -> None:
+    """Sets up the extension for development."""
+    _setup_template_environment(session)
+
+
 @nox.session()
 def lint(session: nox.Session) -> None:
     """Runs linter and formatter checks on python files."""

@@ -1,4 +1,4 @@
-from jaclang.jac.passes.main import (
+from jaclang.jac.passes.tool import (
     JacFormatPass,
 )
 from jaclang.jac.transpiler import jac_str_to_pass
