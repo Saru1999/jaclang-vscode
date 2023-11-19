@@ -11,6 +11,7 @@ from common.utils import (
     update_sys_path,
     get_symbol_at_pos,
     show_doc_info,
+    get_all_symbols,
 )
 
 
@@ -320,6 +321,21 @@ def document_symbol(ls, params: lsp.DocumentSymbolParams):
         except AttributeError:
             pass
     return doc_syms
+
+
+@LSP_SERVER.feature(lsp.TEXT_DOCUMENT_SEMANTIC_TOKENS_FULL)
+def semantic_tokens_full(ls, params: lsp.SemanticTokensParams):
+    uri = params.text_document.uri
+    doc = ls.workspace.get_text_document(uri)
+    if not hasattr(doc, "symbols"):
+        update_doc_tree(ls, doc.uri)
+    symbols = get_all_symbols(ls, doc)
+    tokens = []
+    for sym in symbols:
+        if sym.doc_uri != doc.uri:
+            continue
+        tokens.append(sym.semantic_token)
+    return lsp.SemanticTokens(tokens)
 
 
 # LSP Server Initialization

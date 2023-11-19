@@ -13,7 +13,9 @@ from .symbols import Symbol
 from .utils import get_symbol_at_pos
 
 
-def get_hover_info(ls: LanguageServer, doc: TextDocumentItem, pos: Position) -> Optional[Hover]:
+def get_hover_info(
+    ls: LanguageServer, doc: TextDocumentItem, pos: Position
+) -> Optional[Hover]:
     """
     Returns the hover information for the symbol at the given position.
 

@@ -9,7 +9,7 @@ import sys
 from lsprotocol.types import Position, Range, TextDocumentItem
 from pygls.server import LanguageServer
 
-from .symbols import Symbol
+from .symbols import Symbol, update_doc_deps
 from .logging import log_to_output
 
 
@@ -123,7 +123,7 @@ def show_doc_info(ls, uri):
     doc = ls.workspace.get_document(uri)
     log_to_output(
         ls,
-        f"""{'Symbols Attribute not found' if not hasattr(doc, 'symbols') else f'Symbols found: {len(doc.symbols)}'} 
+        f"""{'Symbols Attribute not found' if not hasattr(doc, 'symbols') else f'Symbols found: {len(doc.symbols)}'}
         {'Dependancies Attribute not found' if not hasattr(doc, 'dependencies') else f'Dependancies found: {len(doc.dependencies)}'}""",
     )
 
@@ -139,7 +139,10 @@ def get_all_children(
 
 
 def get_all_symbols(
-    ls: LanguageServer, doc: TextDocumentItem, include_dep: bool = True, include_impl: bool = False
+    ls: LanguageServer,
+    doc: TextDocumentItem,
+    include_dep: bool = True,
+    include_impl: bool = False,
 ) -> list[Symbol]:
     for sym in doc.symbols:
         if not include_impl and sym.sym_type == "impl":
@@ -148,6 +151,8 @@ def get_all_symbols(
         yield from sym.uses(ls)
         yield from get_all_children(ls, sym, True)
     if include_dep:
+        if not hasattr(doc, "dependencies"):
+            update_doc_deps(ls, doc.uri)
         for dep in doc.dependencies.values():
             for sym in dep["symbols"]:
                 yield sym

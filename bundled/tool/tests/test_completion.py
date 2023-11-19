@@ -23,7 +23,7 @@ class TestGetCompletionItems(unittest.TestCase):
             position=lsp.Position(line=15, character=0),
         )
         completions = get_completion_items(self.ls, params)
-        self.assertGreater(len(completions), 0)
+        self.assertGreater(len(completions), 12)
 
     def test_jac_imports(self):
         # Test when last_word is "include:jac"

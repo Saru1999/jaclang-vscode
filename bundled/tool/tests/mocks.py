@@ -1,10 +1,12 @@
 from unittest.mock import MagicMock
 
+
 class MockLanguageServer(MagicMock):
     def __init__(self, root_path, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.workspace = MockWorkspace(root_path)
         self.dep_table = {}
+
 
 class MockWorkspace:
     def __init__(self, root_path):
@@ -19,7 +21,8 @@ class MockWorkspace:
 
     def get_document(self, uri):
         return self.get_text_document(uri)
-    
+
+
 class MockDocument:
     def __init__(self, doc):
         self.source = doc.text

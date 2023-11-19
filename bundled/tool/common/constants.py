@@ -61,13 +61,13 @@ WALKER_SNIPPET = [
 ]
 
 ENUM_SNIPPETS = [
-        {
-            "label": "Enum Key Value",
-            "detail": "{enum_key} = {enum_value}",
-            "documentation": "Enum Key",
-            "insert_text": "${1:enum_key} = ${2:enum_value},",
-        },
-    ]
+    {
+        "label": "Enum Key Value",
+        "detail": "{enum_key} = {enum_value}",
+        "documentation": "Enum Key",
+        "insert_text": "${1:enum_key} = ${2:enum_value},",
+    },
+]
 
 
 NODE_SNIPPET = [

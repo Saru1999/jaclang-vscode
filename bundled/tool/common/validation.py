@@ -59,17 +59,15 @@ def _validate_jac(
             ls.jlws.modules[doc_path].warnings,
         )
         warnings = warnings if ls.settings.get("showWarning", False) else []
-        print(errors,warnings)
+        print(errors, warnings)
     for alert in errors + warnings:
         msg = alert.msg
         loc = alert.loc
         diagnostics.append(
             Diagnostic(
                 range=Range(
-                    start=Position(
-                        line=loc.first_line , character=loc.col_start
-                    ),
-                    end=Position(line=loc.last_line, character=loc.col_end ),
+                    start=Position(line=loc.first_line, character=loc.col_start),
+                    end=Position(line=loc.last_line, character=loc.col_end),
                 ),
                 message=msg,
                 severity=DiagnosticSeverity.Error

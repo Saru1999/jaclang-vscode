@@ -11,7 +11,16 @@ from lsprotocol.types import (
     InsertTextFormat,
 )
 
-from .constants import JAC_KW, PY_LIBS, SNIPPETS, WALKER_SNIPPET, NODE_SNIPPET, ENUM_SNIPPETS, OBJECT_SNIPPETS
+from .constants import (
+    JAC_KW,
+    PY_LIBS,
+    SNIPPETS,
+    WALKER_SNIPPET,
+    NODE_SNIPPET,
+    ENUM_SNIPPETS,
+    OBJECT_SNIPPETS,
+)
+
 # from .logging import log_to_output
 from .symbols import get_symbol_by_name
 from .utils import get_relative_path, get_all_symbols, get_scope_at_pos
@@ -66,7 +75,9 @@ def get_completion_items(
     before_cursor = line[: params.position.character]
     last_word = before_cursor.split()[-1] if len(before_cursor.split()) else ""
 
-    scope_node = get_scope_at_pos(ls, doc, params.position, get_all_symbols(ls, doc, False, True))
+    scope_node = get_scope_at_pos(
+        ls, doc, params.position, get_all_symbols(ls, doc, False, True)
+    )
 
     completion_items = []
 

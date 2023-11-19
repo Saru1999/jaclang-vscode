@@ -182,6 +182,18 @@ class Symbol:
         )
 
     @property
+    def semantic_token(self):
+        location = self.location
+        token = [
+            location.range.start.line,  # deltaLine
+            location.range.start.character,  # deltaStart
+            len(self.sym_name),  # length
+            self._get_token_type(self.sym_type),  # tokenType
+            1,  # tokenModifiers
+        ]
+        return token
+
+    @property
     def location(self):
         return self.sym_info.location
 
@@ -247,6 +259,29 @@ class Symbol:
             "enum_member": SymbolKind.EnumMember,
         }
         return sym_type_map.get(sym_type, SymbolKind.Variable)
+
+    @staticmethod
+    def _get_token_type(sym_type: str) -> int:
+        sym_type_map = {
+            "mod": 0,
+            "mod_var": 1,
+            "var": 1,
+            "immutable": 1,
+            "ability": 2,
+            "object": 3,
+            "node": 3,
+            "edge": 3,
+            "walker": 3,
+            "enum": 4,
+            "test": 5,
+            "type": 6,
+            "impl": 7,
+            "field": 8,
+            "method": 9,
+            "constructor": 10,
+            "enum_member": 11,
+        }
+        return sym_type_map.get(sym_type, 1)
 
 
 def get_doc_symbols(ls: LanguageServer, doc_uri: str) -> List[Symbol]:
