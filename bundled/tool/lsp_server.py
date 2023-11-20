@@ -37,6 +37,10 @@ from common.symbols import (  # noqa: E402
 )
 from common.hover import get_hover_info  # noqa: E402
 from common.logging import log_to_output  # noqa: E402
+from common.constants import (
+    SEMANTIC_TOKEN_TYPES,
+    SEMANTIC_TOKEN_MODIFIERS,
+)  # noqa: E402
 
 
 class JacLanguageServer(server.LanguageServer):
@@ -281,15 +285,13 @@ def definition(ls, params: lsp.DefinitionParams):
 
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_HOVER)
-def hover(ls, params: lsp.HoverParams):
+def hover(ls, params: lsp.HoverParams) -> Optional[lsp.Hover]:
     """
     TODO: Add More information to the hover
     """
     uri = params.text_document.uri
     position = params.position
     lsp_document = ls.workspace.get_text_document(uri)
-    if lsp_document is None:
-        return None
     return get_hover_info(ls, lsp_document, position)
 
 
@@ -297,7 +299,9 @@ def hover(ls, params: lsp.HoverParams):
 
 
 @LSP_SERVER.feature(lsp.WORKSPACE_SYMBOL)
-def workspace_symbol(ls, params: lsp.WorkspaceSymbolParams):
+def workspace_symbol(
+    ls, params: lsp.WorkspaceSymbolParams
+) -> list[lsp.SymbolInformation]:
     """Workspace symbols."""
     symbols = []
     for doc in ls.workspace.documents.values():
@@ -308,34 +312,34 @@ def workspace_symbol(ls, params: lsp.WorkspaceSymbolParams):
 
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DOCUMENT_SYMBOL)
-def document_symbol(ls, params: lsp.DocumentSymbolParams):
+def document_symbol(ls, params: lsp.DocumentSymbolParams) -> list[lsp.DocumentSymbol]:
     """Document symbols."""
     uri = params.text_document.uri
     doc = ls.workspace.get_text_document(uri)
     if not hasattr(doc, "symbols"):
         update_doc_tree(ls, doc.uri)
-    doc_syms = []
-    for sym in doc.symbols:
-        try:
-            doc_syms.append(sym.doc_sym)
-        except AttributeError:
-            pass
+    doc_syms = [s.doc_sym for s in doc.symbols]
     return doc_syms
 
 
-@LSP_SERVER.feature(lsp.TEXT_DOCUMENT_SEMANTIC_TOKENS_FULL)
-def semantic_tokens_full(ls, params: lsp.SemanticTokensParams):
+@LSP_SERVER.feature(
+    lsp.TEXT_DOCUMENT_SEMANTIC_TOKENS_FULL,
+    lsp.SemanticTokensLegend(
+        token_types=SEMANTIC_TOKEN_TYPES, token_modifiers=SEMANTIC_TOKEN_MODIFIERS
+    ),
+)
+def semantic_tokens_full(ls, params: lsp.SemanticTokensParams) -> lsp.SemanticTokens:
     uri = params.text_document.uri
     doc = ls.workspace.get_text_document(uri)
     if not hasattr(doc, "symbols"):
         update_doc_tree(ls, doc.uri)
     symbols = get_all_symbols(ls, doc)
-    tokens = []
+    data = []
     for sym in symbols:
         if sym.doc_uri != doc.uri:
             continue
-        tokens.append(sym.semantic_token)
-    return lsp.SemanticTokens(tokens)
+        data += sym.semantic_tokens
+    return lsp.SemanticTokens(data)
 
 
 # LSP Server Initialization

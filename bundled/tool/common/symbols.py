@@ -16,7 +16,6 @@ from lsprotocol.types import (
 from jaclang.jac.workspace import Workspace
 from jaclang.jac.absyntree import (
     AstNode,
-    String,
     Ability,
     Architype,
     HasVar,
@@ -30,6 +29,8 @@ from jaclang.jac.absyntree import (
 from jaclang.jac.symtable import SymbolTable, Symbol as JSymbol
 
 from .logging import log_to_output
+
+OFFSET = 1
 
 
 def fill_workspace(ls: LanguageServer) -> None:
@@ -114,29 +115,31 @@ class Symbol:
 
     @property
     def sym_type(self):
+        if self.is_use:
+            return self.is_use.sym_type
         return str(self.node.sym_type)
 
     @property
     def sym_doc(self):
-        return (
-            self.ws_symbol.decl.doc.value[3:-3]
-            if hasattr(self.ws_symbol.decl, "doc")
-            and isinstance(self.ws_symbol.decl.doc, String)
-            else ""
-        )
+        try:
+            return self.ws_symbol.decl.doc.value[3:-3]
+        except Exception:
+            return ""
 
     @property
     def defn_loc(self):
+        if self.is_use is None:
+            return None
         return Location(
             uri=f"file://{os.path.join(os.getcwd(), self.ws_symbol.decl.loc.mod_path)}",
             range=Range(
                 start=Position(
-                    line=self.ws_symbol.decl.sym_name_node.loc.first_line - 1,
-                    character=self.ws_symbol.decl.sym_name_node.loc.col_start - 1,
+                    line=self.ws_symbol.decl.sym_name_node.loc.first_line - OFFSET,
+                    character=self.ws_symbol.decl.sym_name_node.loc.col_start - OFFSET,
                 ),
                 end=Position(
-                    line=self.ws_symbol.decl.sym_name_node.loc.last_line - 1,
-                    character=self.ws_symbol.decl.sym_name_node.loc.col_end - 1,
+                    line=self.ws_symbol.decl.sym_name_node.loc.last_line - OFFSET,
+                    character=self.ws_symbol.decl.sym_name_node.loc.col_end - OFFSET,
                 ),
             ),
         )
@@ -150,12 +153,12 @@ class Symbol:
                 uri=self.doc_uri,
                 range=Range(
                     start=Position(
-                        line=self.node.sym_name_node.loc.first_line - 1,
-                        character=self.node.sym_name_node.loc.col_start - 1,
+                        line=self.node.sym_name_node.loc.first_line - OFFSET,
+                        character=self.node.sym_name_node.loc.col_start - OFFSET,
                     ),
                     end=Position(
-                        line=self.node.sym_name_node.loc.last_line - 1,
-                        character=self.node.sym_name_node.loc.col_end - 1,
+                        line=self.node.sym_name_node.loc.last_line - OFFSET,
+                        character=self.node.sym_name_node.loc.col_end - OFFSET,
                     ),
                 ),
             ),
@@ -168,12 +171,12 @@ class Symbol:
             kind=self.sym_info.kind,
             range=Range(
                 start=Position(
-                    line=self.node.loc.first_line - 1,
-                    character=self.node.loc.col_start - 1,
+                    line=self.node.loc.first_line - OFFSET,
+                    character=self.node.loc.col_start - OFFSET,
                 ),
                 end=Position(
-                    line=self.node.loc.last_line - 1,
-                    character=self.node.loc.col_end - 1,
+                    line=self.node.loc.last_line - OFFSET,
+                    character=self.node.loc.col_end - OFFSET,
                 ),
             ),
             selection_range=self.sym_info.location.range,
@@ -189,7 +192,7 @@ class Symbol:
             location.range.start.character,  # deltaStart
             len(self.sym_name),  # length
             self._get_token_type(self.sym_type),  # tokenType
-            1,  # tokenModifiers
+            self._get_token_modifier(self.sym_type),  # tokenModifiers
         ]
         return token
 
@@ -263,25 +266,30 @@ class Symbol:
     @staticmethod
     def _get_token_type(sym_type: str) -> int:
         sym_type_map = {
-            "mod": 0,
-            "mod_var": 1,
-            "var": 1,
-            "immutable": 1,
-            "ability": 2,
-            "object": 3,
-            "node": 3,
-            "edge": 3,
-            "walker": 3,
-            "enum": 4,
-            "test": 5,
-            "type": 6,
-            "impl": 7,
+            "mod": 14,
+            "mod_var": 7,
+            "var": 7,
+            "immutable": 7,
+            "ability": 11,
+            "object": 1,
+            "node": 1,
+            "edge": 1,
+            "walker": 1,
+            "enum": 2,
+            "test": 11,
+            "type": 5,
+            "impl": 12,
             "field": 8,
-            "method": 9,
-            "constructor": 10,
-            "enum_member": 11,
+            "method": 12,
+            "constructor": 12,
+            "enum_member": 9,
         }
-        return sym_type_map.get(sym_type, 1)
+        return sym_type_map.get(sym_type, 14)
+
+    @staticmethod
+    def _get_token_modifier(sym_type: str) -> int:
+        # TODO: Add support for modifiers
+        return 0
 
 
 def get_doc_symbols(ls: LanguageServer, doc_uri: str) -> List[Symbol]:
@@ -293,7 +301,7 @@ def get_doc_symbols(ls: LanguageServer, doc_uri: str) -> List[Symbol]:
             continue
         symbols.append(Symbol(sym_tab, doc_uri))
     for sym in module.ir.sym_tab.tab.values():
-        if str(sym.sym_type) != "var":
+        if str(sym.sym_type) != "var" or sym.decl.loc.first_line == 0:
             continue
         symbols.append(Symbol(sym, doc_uri))
     return symbols
