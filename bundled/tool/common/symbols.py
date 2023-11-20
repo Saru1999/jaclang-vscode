@@ -291,6 +291,9 @@ class Symbol:
         # TODO: Add support for modifiers
         return 0
 
+    def __repr__(self) -> str:
+        return f"Symbol({self.sym_name}:{self.sym_type} Location:{self.location.range} {f'Use of {self.is_use.sym_name}' if self.is_use is not None else ''})"
+
 
 def get_doc_symbols(ls: LanguageServer, doc_uri: str) -> List[Symbol]:
     symbols: List[Symbol] = []

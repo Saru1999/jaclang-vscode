@@ -292,6 +292,8 @@ def hover(ls, params: lsp.HoverParams) -> Optional[lsp.Hover]:
     uri = params.text_document.uri
     position = params.position
     lsp_document = ls.workspace.get_text_document(uri)
+    all_symbols = list(get_all_symbols(ls, lsp_document, True, True))
+    log_to_output(ls, f"symbols: {all_symbols}")
     return get_hover_info(ls, lsp_document, position)
 
 

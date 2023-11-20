@@ -105,7 +105,7 @@ def is_contained(sym_range: Range, hover_position: Position) -> bool:
 def get_symbol_at_pos(
     ls: LanguageServer, doc: TextDocumentItem, pos: Position
 ) -> Optional[Symbol]:
-    for sym in get_all_symbols(ls, doc):
+    for sym in get_all_symbols(ls, doc, True, True):
         if sym.doc_uri != doc.uri:
             continue
         if is_contained(sym.location.range, pos):

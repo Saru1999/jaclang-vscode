@@ -29,7 +29,7 @@ node turn {
     visit -->;
 }
 
-:walker:GuessGame:can:process_guess{
+:walker:GuessGame:can:process_guess(guess: int) {
     if guess > <self>.correct_number {
         "Too high!" |> print;
     } elif guess < <self>.correct_number {
