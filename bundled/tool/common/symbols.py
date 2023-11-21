@@ -130,18 +130,25 @@ class Symbol:
 
     @property
     def defn_loc(self):
-        if self.is_use is None:
+        if self.is_use is None and self.sym_type != "impl":
             return None
+        logging.info(f"Getting defn_loc for {self}")
+        defn_node = (
+            self.ws_symbol.decl.decl_link
+            if self.sym_type == "impl"
+            else self.ws_symbol.decl
+        )
+        logging.info(f"defn_node: {defn_node}")
         return Location(
-            uri=f"file://{os.path.join(os.getcwd(), self.ws_symbol.decl.loc.mod_path)}",
+            uri=f"file://{os.path.join(os.getcwd(), defn_node.loc.mod_path)}",
             range=Range(
                 start=Position(
-                    line=self.ws_symbol.decl.sym_name_node.loc.first_line - OFFSET,
-                    character=self.ws_symbol.decl.sym_name_node.loc.col_start - OFFSET,
+                    line=defn_node.sym_name_node.loc.first_line - OFFSET,
+                    character=defn_node.sym_name_node.loc.col_start - OFFSET,
                 ),
                 end=Position(
-                    line=self.ws_symbol.decl.sym_name_node.loc.last_line - OFFSET,
-                    character=self.ws_symbol.decl.sym_name_node.loc.col_end - OFFSET,
+                    line=defn_node.sym_name_node.loc.last_line - OFFSET,
+                    character=defn_node.sym_name_node.loc.col_end - OFFSET,
                 ),
             ),
         )

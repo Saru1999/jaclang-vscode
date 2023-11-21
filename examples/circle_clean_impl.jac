@@ -7,8 +7,7 @@ import:py math;
 }
 
 """Function to calculate the area of a circle."""
-:can:calculate_area
-(radius: float) -> float {
+:can:calculate_area(radius: float) -> float {
     return math.pi * radius * radius;
 }
 
