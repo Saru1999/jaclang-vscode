@@ -1,6 +1,6 @@
 {
     "name": "jaclang-extension",
-    "displayName": "Jac Language",
+    "displayName": "%extension.displayName%",
     "description": "%extension.description%",
     "version": "2023.9.0",
     "preview": true,
