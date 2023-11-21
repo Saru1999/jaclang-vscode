@@ -25,10 +25,12 @@ from jaclang.jac.absyntree import (
     WithStmt,
     IterForStmt,
     ModuleCode,
+    AstImplOnlyNode,
 )
 from jaclang.jac.symtable import SymbolTable, Symbol as JSymbol
 
 from .logging import log_to_output
+import logging
 
 OFFSET = 1
 
@@ -183,6 +185,27 @@ class Symbol:
             detail=self.sym_doc,
             children=self._get_children_doc_sym(),
         )
+
+    @property
+    def impl_loc(self):
+        try:
+            ws_symbol = self.is_use.ws_symbol if self.is_use else self.ws_symbol
+            if isinstance(ws_symbol.decl.body, AstImplOnlyNode):
+                return Location(
+                    uri=f"file://{os.path.join(os.getcwd(), ws_symbol.decl.body.loc.mod_path)}",
+                    range=Range(
+                        start=Position(
+                            line=ws_symbol.decl.body.loc.first_line - OFFSET,
+                            character=ws_symbol.decl.body.loc.col_start - OFFSET,
+                        ),
+                        end=Position(
+                            line=ws_symbol.decl.body.loc.last_line - OFFSET,
+                            character=ws_symbol.decl.body.loc.col_end - OFFSET,
+                        ),
+                    ),
+                )
+        except Exception:
+            return None
 
     @property
     def semantic_token(self):

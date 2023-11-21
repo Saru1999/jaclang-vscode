@@ -37,10 +37,10 @@ from common.symbols import (  # noqa: E402
 )
 from common.hover import get_hover_info  # noqa: E402
 from common.logging import log_to_output  # noqa: E402
-from common.constants import (
+from common.constants import (  # noqa: E402
     SEMANTIC_TOKEN_TYPES,
     SEMANTIC_TOKEN_MODIFIERS,
-)  # noqa: E402
+)
 
 
 class JacLanguageServer(server.LanguageServer):
@@ -282,6 +282,26 @@ def definition(ls, params: lsp.DefinitionParams):
     symbol = get_symbol_at_pos(ls, doc, params.position)
     if symbol is not None:
         return symbol.defn_loc
+
+
+@LSP_SERVER.feature(lsp.TEXT_DOCUMENT_IMPLEMENTATION)
+def implementation(ls, params: lsp.ImplementationParams):
+    doc = ls.workspace.get_text_document(params.text_document.uri)
+    if not hasattr(doc, "symbols"):
+        update_doc_tree(ls, doc.uri)
+    symbol = get_symbol_at_pos(ls, doc, params.position)
+    if symbol is not None:
+        return symbol.impl_loc
+
+
+@LSP_SERVER.feature(lsp.TEXT_DOCUMENT_REFERENCES)
+def references(ls, params: lsp.ReferenceParams):
+    doc = ls.workspace.get_text_document(params.text_document.uri)
+    if not hasattr(doc, "symbols"):
+        update_doc_tree(ls, doc.uri)
+    symbol = get_symbol_at_pos(ls, doc, params.position)
+    if symbol is not None:
+        return [s.location for s in symbol.uses(ls)]
 
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_HOVER)
