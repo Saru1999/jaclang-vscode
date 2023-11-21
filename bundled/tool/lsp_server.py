@@ -10,7 +10,7 @@ from common.utils import (
     normalize_path,
     update_sys_path,
     get_symbol_at_pos,
-    show_doc_info,
+    show_doc_info,  # noqa: F401
     get_all_symbols,
 )
 
@@ -89,9 +89,10 @@ def did_save(ls, params: lsp.DidSaveTextDocumentParams):
     doc.version += 1
 
     diagnostics = validate(ls, params, False, True)
-    log_to_output(ls, f"Number of diagnostics: {len(diagnostics)}")
     ls.publish_diagnostics(params.text_document.uri, diagnostics)
-    if not diagnostics:
+
+    # if any of the diagnostics are errors, then don't update the document tree
+    if not any(diagnostic.severity == lsp.DiagnosticSeverity.Error for diagnostic in diagnostics):
         update_doc_tree(ls, params.text_document.uri)
         update_doc_deps(ls, params.text_document.uri)
 
@@ -112,11 +113,10 @@ async def did_open(ls: server.LanguageServer, params: lsp.DidOpenTextDocumentPar
     diagnostics = validate(ls, params)
     ls.publish_diagnostics(params.text_document.uri, diagnostics)
 
-    if not diagnostics:
+    # if any of the diagnostics are errors, then don't update the document tree
+    if not any(diagnostic.severity == lsp.DiagnosticSeverity.Error for diagnostic in diagnostics):
         update_doc_tree(ls, params.text_document.uri)
         update_doc_deps(ls, params.text_document.uri)
-
-    show_doc_info(ls, params.text_document.uri)
 
 
 # Handle File Operations
@@ -129,13 +129,6 @@ async def did_open(ls: server.LanguageServer, params: lsp.DidOpenTextDocumentPar
     ),
 )
 def did_create_files(ls: server.LanguageServer, params: lsp.CreateFilesParams):
-    """
-    Callback function for when files are created in the workspace.
-
-    Args:
-        ls (LanguageServer): The language server instance.
-        params (lsp.CreateFilesParams): The parameters for the file creation.
-    """
     fill_workspace(ls)
 
 
@@ -146,10 +139,6 @@ def did_create_files(ls: server.LanguageServer, params: lsp.CreateFilesParams):
     ),
 )
 def did_rename_files(ls: server.LanguageServer, params: lsp.RenameFilesParams):
-    """
-    Callback function for when a file is renamed in the workspace.
-    Updates the dependency table and handles renaming of import statements.
-    """
     new_uri = params.files[0].new_uri
     old_uri = params.files[0].old_uri
 
@@ -205,24 +194,24 @@ def did_delete_files(ls: server.LanguageServer, params: lsp.DeleteFilesParams):
 # Notebook Support
 
 
-@LSP_SERVER.feature(lsp.NOTEBOOK_DOCUMENT_DID_OPEN)
-async def did_notebook_document_open(ls, params: lsp.DidOpenNotebookDocumentParams):
-    pass
+# @LSP_SERVER.feature(lsp.NOTEBOOK_DOCUMENT_DID_OPEN)
+# async def did_notebook_document_open(ls, params: lsp.DidOpenNotebookDocumentParams):
+#     pass
 
 
-@LSP_SERVER.feature(lsp.NOTEBOOK_DOCUMENT_DID_CLOSE)
-async def did_notebook_document_close(ls, params: lsp.DidCloseNotebookDocumentParams):
-    pass
+# @LSP_SERVER.feature(lsp.NOTEBOOK_DOCUMENT_DID_CLOSE)
+# async def did_notebook_document_close(ls, params: lsp.DidCloseNotebookDocumentParams):
+#     pass
 
 
-@LSP_SERVER.feature(lsp.NOTEBOOK_DOCUMENT_DID_SAVE)
-async def did_notebook_document_save(ls, params: lsp.DidSaveNotebookDocumentParams):
-    pass
+# @LSP_SERVER.feature(lsp.NOTEBOOK_DOCUMENT_DID_SAVE)
+# async def did_notebook_document_save(ls, params: lsp.DidSaveNotebookDocumentParams):
+#     pass
 
 
-@LSP_SERVER.feature(lsp.NOTEBOOK_DOCUMENT_DID_CHANGE)
-async def did_notebook_document_change(ls, params: lsp.DidChangeNotebookDocumentParams):
-    pass
+# @LSP_SERVER.feature(lsp.NOTEBOOK_DOCUMENT_DID_CHANGE)
+# async def did_notebook_document_change(ls, params: lsp.DidChangeNotebookDocumentParams):
+#     pass
 
 
 # Features
@@ -256,22 +245,26 @@ def completions(params: Optional[lsp.CompletionParams] = None) -> lsp.Completion
     return lsp.CompletionList(is_incomplete=False, items=completion_items)
 
 
-@LSP_SERVER.feature(lsp.TEXT_DOCUMENT_INLINE_COMPLETION)
-def inline_completions(ls, params: lsp.InlineCompletionParams):
-    # https://www.youtube.com/watch?v=B89NXOqif-E
-    pass
+# @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_INLINE_COMPLETION)
+# def inline_completions(ls, params: lsp.InlineCompletionParams):
+#     # https://www.youtube.com/watch?v=B89NXOqif-E
+#     completion_items = get_completion_items(ls, params)
+#     return lsp.InlineCompletionList(items=[
+#         lsp.InlineCompletionItem(insert_text=item.insert_text)
+#         for item in completion_items
+#     ])
 
 
-@LSP_SERVER.feature(lsp.TEXT_DOCUMENT_INLAY_HINT)
-def inlay_hints(ls, params: lsp.InlayHintParams):
-    # https://www.youtube.com/watch?v=uvrIFZYW7eg
-    pass
+# @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_INLAY_HINT)
+# def inlay_hints(ls, params: lsp.InlayHintParams):
+#     # https://www.youtube.com/watch?v=uvrIFZYW7eg
+#     pass
 
 
-@LSP_SERVER.feature(lsp.TEXT_DOCUMENT_SIGNATURE_HELP)
-def signature_help(ls, params: lsp.SignatureHelpParams):
-    # https://www.youtube.com/watch?v=vi2PLcLqVxI
-    pass
+# @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_SIGNATURE_HELP)
+# def signature_help(ls, params: lsp.SignatureHelpParams):
+#     # https://www.youtube.com/watch?v=vi2PLcLqVxI
+#     pass
 
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DEFINITION)
@@ -304,7 +297,7 @@ def references(ls, params: lsp.ReferenceParams):
         return [s.location for s in symbol.uses(ls)]
 
 
-@LSP_SERVER.feature(lsp.TEXT_DOCUMENT_HOVER)
+@LSP_SERVER.feature(lsp.TEXT_DOCUMENT_HOVER, lsp.HoverOptions(work_done_progress=True))
 def hover(ls, params: lsp.HoverParams) -> Optional[lsp.Hover]:
     """
     TODO: Add More information to the hover

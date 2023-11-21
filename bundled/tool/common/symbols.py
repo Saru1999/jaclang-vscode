@@ -29,9 +29,6 @@ from jaclang.jac.absyntree import (
 )
 from jaclang.jac.symtable import SymbolTable, Symbol as JSymbol
 
-from .logging import log_to_output
-import logging
-
 OFFSET = 1
 
 
@@ -78,7 +75,6 @@ def update_doc_deps(ls: LanguageServer, doc_uri: str) -> None:
     ls.dep_table[doc_url] = [s for s in imports if s["is_jac_import"]]
     for dep in imports:
         if dep["is_jac_import"]:
-            log_to_output(ls, f"Importing {dep['path']} for {doc_url}")
             dep_doc = ls.workspace.get_text_document(dep["uri"])
             if not hasattr(dep_doc, "symbols"):
                 update_doc_tree(ls, dep_doc.uri)
@@ -132,13 +128,11 @@ class Symbol:
     def defn_loc(self):
         if self.is_use is None and self.sym_type != "impl":
             return None
-        logging.info(f"Getting defn_loc for {self}")
         defn_node = (
             self.ws_symbol.decl.decl_link
             if self.sym_type == "impl"
             else self.ws_symbol.decl
         )
-        logging.info(f"defn_node: {defn_node}")
         return Location(
             uri=f"file://{os.path.join(os.getcwd(), defn_node.loc.mod_path)}",
             range=Range(

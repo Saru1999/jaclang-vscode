@@ -9,6 +9,7 @@ from lsprotocol.types import (
     CompletionItem,
     CompletionItemKind,
     InsertTextFormat,
+    InlineCompletionParams,
 )
 
 from .constants import (
@@ -19,11 +20,20 @@ from .constants import (
     NODE_SNIPPET,
     ENUM_SNIPPETS,
     OBJECT_SNIPPETS,
+    ABILITY_SNIPPETS,
 )
 
-# from .logging import log_to_output
 from .symbols import get_symbol_by_name
 from .utils import get_relative_path, get_all_symbols, get_scope_at_pos
+
+
+SCOPE_SNIPPETS = {
+    "node": NODE_SNIPPET,
+    "walker": WALKER_SNIPPET,
+    "object": OBJECT_SNIPPETS,
+    "enum": ENUM_SNIPPETS,
+    "ability": ABILITY_SNIPPETS,
+}
 
 
 def _get_completion_kind(sym_type: str) -> CompletionItemKind:
@@ -58,7 +68,7 @@ def _get_completion_kind(sym_type: str) -> CompletionItemKind:
 
 
 def get_completion_items(
-    ls: LanguageServer, params: Optional[CompletionParams]
+    ls: LanguageServer, params: Optional[CompletionParams | InlineCompletionParams]
 ) -> list[CompletionItem]:
     """
     Returns a list of completion items based on the text document and cursor position.
@@ -75,7 +85,7 @@ def get_completion_items(
     before_cursor = line[: params.position.character]
     last_word = before_cursor.split()[-1] if len(before_cursor.split()) else ""
 
-    scope_node = get_scope_at_pos(
+    scope_sym = get_scope_at_pos(
         ls, doc, params.position, get_all_symbols(ls, doc, False, True)
     )
 
@@ -305,13 +315,7 @@ def get_completion_items(
         {enum_key} = {enum_value},
     }
     """
-    SCOPE_SNIPPETS = {
-        "node": NODE_SNIPPET,
-        "walker": WALKER_SNIPPET,
-        "object": OBJECT_SNIPPETS,
-        "enum": ENUM_SNIPPETS,
-    }
-    if scope_node:
+    if scope_sym:
         completion_items += [
             CompletionItem(
                 label=snippet["label"],
@@ -321,7 +325,7 @@ def get_completion_items(
                 insert_text=snippet["insert_text"],
                 insert_text_format=InsertTextFormat.Snippet,
             )
-            for snippet in SCOPE_SNIPPETS.get(scope_node.sym_type, [])
+            for snippet in SCOPE_SNIPPETS.get(scope_sym.sym_type, [])
         ]
 
     # inside a ability
@@ -335,10 +339,27 @@ def get_completion_items(
         visit -->;
     }
     """
+    if scope_sym and (
+        scope_sym.sym_type == "ability"
+        or (
+            scope_sym.sym_type == "impl"
+            and scope_sym.ws_symbol.decl.decl_link.sym_type == "ability"
+        )
+    ):
+        completion_items += [
+            CompletionItem(
+                label=snippet["label"],
+                kind=CompletionItemKind.Snippet,
+                detail=snippet["detail"],
+                documentation=snippet["documentation"],
+                insert_text=snippet["insert_text"],
+                insert_text_format=InsertTextFormat.Snippet,
+            )
+            for snippet in SCOPE_SNIPPETS.get("ability", [])
+        ]
 
     # inside a python block
     """
     {normal python stuff}
     """
-    print(completion_items)
     return completion_items

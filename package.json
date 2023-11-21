@@ -48,9 +48,6 @@
             "description": "Virtual Workspaces are not supported with jaseci."
         }
     },
-    "activationEvents": [
-        "onLanguage:jac"
-    ],
     "main": "./dist/extension.js",
     "scripts": {
         "vscode:prepublish": "npm run package",
