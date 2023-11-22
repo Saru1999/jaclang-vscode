@@ -141,7 +141,7 @@ NODE_SNIPPET = [
     },
 ]
 
-ABILITY_SNIPPETS = [] #TODO: Add ability snippets
+ABILITY_SNIPPETS = []  # TODO: Add ability snippets
 
 
 OBJECT_SNIPPETS = [

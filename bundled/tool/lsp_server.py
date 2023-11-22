@@ -92,7 +92,10 @@ def did_save(ls, params: lsp.DidSaveTextDocumentParams):
     ls.publish_diagnostics(params.text_document.uri, diagnostics)
 
     # if any of the diagnostics are errors, then don't update the document tree
-    if not any(diagnostic.severity == lsp.DiagnosticSeverity.Error for diagnostic in diagnostics):
+    if not any(
+        diagnostic.severity == lsp.DiagnosticSeverity.Error
+        for diagnostic in diagnostics
+    ):
         update_doc_tree(ls, params.text_document.uri)
         update_doc_deps(ls, params.text_document.uri)
 
@@ -114,7 +117,10 @@ async def did_open(ls: server.LanguageServer, params: lsp.DidOpenTextDocumentPar
     ls.publish_diagnostics(params.text_document.uri, diagnostics)
 
     # if any of the diagnostics are errors, then don't update the document tree
-    if not any(diagnostic.severity == lsp.DiagnosticSeverity.Error for diagnostic in diagnostics):
+    if not any(
+        diagnostic.severity == lsp.DiagnosticSeverity.Error
+        for diagnostic in diagnostics
+    ):
         update_doc_tree(ls, params.text_document.uri)
         update_doc_deps(ls, params.text_document.uri)
 

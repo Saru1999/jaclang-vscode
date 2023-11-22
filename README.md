@@ -1,6 +1,7 @@
 [![Release](https://github.com/Jaseci-Labs/jaclang-vscode/actions/workflows/release.yml/badge.svg)](https://github.com/Jaseci-Labs/jaclang-vscode/actions/workflows/release.yml) [![Run Tests](https://github.com/Jaseci-Labs/jaclang-vscode/actions/workflows/ls_tests.yml/badge.svg)](https://github.com/Jaseci-Labs/jaclang-vscode/actions/workflows/ls_tests.yml)
 
 # Jaclang Language Extension for VScode
+
 The Jaclang Language Extension for VScode is an extension that provides basic Language Server Protocol (LSP) functionalities for the Jaclang programming language. Jaclang is a programming language developed by Jaseci-Labs, and it is designed to be a versatile and powerful language for building complex systems.
 
 The extension provides features such as syntax highlighting, error diagnostics, auto-completion, and file handling. It also includes commands for restarting the server, running tests, running files, and clearing the cache.
@@ -10,7 +11,6 @@ The extension uses pygls as its language server, which is responsible for provid
 Overall, the Jaclang Language Extension for VScode is a useful tool for developers who are working with the Jaclang programming language, as it provides essential functionalities for developing and debugging Jaclang code.
 
 ## Features
-
 
 | Feature | LSP Methods | Status | Remarks |
 | ------- | ---------- | ------ | ------- |
@@ -43,7 +43,6 @@ Overall, the Jaclang Language Extension for VScode is a useful tool for develope
 | Jaseci: Run File       | Run the File in the Workspace  |  🚧   |
 | Jaseci: Clear Cache    | Clear the Cache  |  🚧   |
 
-
 ## Settings
 
 | Settings | Default | Description |
@@ -53,16 +52,16 @@ Overall, the Jaclang Language Extension for VScode is a useful tool for develope
 | jaseci.importStrategy | `useBundled` | Setting to choose where to load `jaclang` from. `useBundled` picks jaclang bundled with the extension. `fromEnvironment` uses `jaclang` available in the environment. |
 | jaseci.showNotifications | `off` | Setting to control when a notification is shown. |
 | jaseci.reportingScope | `file` | (experimental) Setting to control if problems are reported for files open in the editor (`file`) or for the entire workspace (`workspace`). |
-| jaseci.showWarnings | ` false` | Setting to control if warnings are shown in the file/workspace |
+| jaseci.showWarnings | `false` | Setting to control if warnings are shown in the file/workspace |
 
 ## Contributing
 
 ### Pre-requisites
 
--   [Node.js](https://nodejs.org/en/)
--   [VS Code](https://code.visualstudio.com/)
--   [Python](https://www.python.org/)(3.11)
-    -   [Conda](https://docs.conda.io/en/latest/) (optional) `conda create -n vscode-jaseci python=3.11 -y`
+- [Node.js](https://nodejs.org/en/)
+- [VS Code](https://code.visualstudio.com/)
+- [Python](https://www.python.org/)(3.11)
+  - [Conda](https://docs.conda.io/en/latest/) (optional) `conda create -n vscode-jaseci python=3.11 -y`
 
 ### Setup
 
@@ -96,7 +95,7 @@ To run language server tests
 pytest
 ```
 
-Then you can install the extension on your VSCode using this https://code.visualstudio.com/docs/editor/extension-marketplace
+Then you can install the extension on your VSCode using this <https://code.visualstudio.com/docs/editor/extension-marketplace>
 
 ## Logging
 
