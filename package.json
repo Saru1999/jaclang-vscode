@@ -179,6 +179,21 @@
                 "title": "%command.restartServer%",
                 "category": "Jaclang",
                 "command": "jaclang.restart"
+            },
+            {
+                "title": "Run Jac file",
+                "category": "Jaclang",
+                "command": "jaclang.run"
+            },
+            {
+                "title": "Run Tests",
+                "category": "Jaclang",
+                "command": "jaclang.test"
+            },
+            {
+                "title": "Clean Cache",
+                "category": "Jaclang",
+                "command": "jaclang.clean"
             }
         ]
     },

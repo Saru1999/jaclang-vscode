@@ -5,6 +5,7 @@ import pathlib
 import sysconfig
 import site
 import sys
+import platform
 
 from lsprotocol.types import Position, Range, TextDocumentItem
 from pygls.server import LanguageServer
@@ -174,3 +175,14 @@ def get_scope_at_pos(
                 return kid
             return sym
     return None
+
+
+def get_command(command):
+    if platform.system() == "Windows":
+        return f"start cmd /k {command}"
+    elif platform.system() == "Linux":
+        return f"gnome-terminal -- bash -c '{command}; exec bash'"
+    elif platform.system() == "Darwin":
+        return f'osascript -e \'tell app "Terminal" to do script "{command}"\''
+    else:
+        return command

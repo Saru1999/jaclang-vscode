@@ -5,6 +5,7 @@ import json
 import os
 import pathlib
 from typing import Optional
+import subprocess
 
 from common.utils import (
     normalize_path,
@@ -12,6 +13,7 @@ from common.utils import (
     get_symbol_at_pos,
     show_doc_info,  # noqa: F401
     get_all_symbols,
+    get_command,
 )
 
 
@@ -44,6 +46,14 @@ from common.constants import (  # noqa: E402
 
 
 class JacLanguageServer(server.LanguageServer):
+    """Language Server for Jaclang."""
+
+    CMD_RUN_JAC = "jaclang.run"
+    CMD_TEST_JAC = "jaclang.test"
+    CMD_CLEAN_JAC = "jaclang.clean"
+
+    current_doc: Optional[lsp.TextDocumentItem] = None
+
     def __init__(self, name, version, max_workers):
         super().__init__(name=name, version=version, max_workers=max_workers)
         self.workspace_filled = False
@@ -106,7 +116,7 @@ async def did_open(ls: server.LanguageServer, params: lsp.DidOpenTextDocumentPar
     This function is called when a text document is opened in the client.
     It fills the workspace if it is not already filled and validates the parameters.
     """
-
+    ls.current_doc = params.text_document
     if not ls.workspace_filled:
         try:
             fill_workspace(ls)
@@ -361,6 +371,33 @@ def semantic_tokens_full(ls, params: lsp.SemanticTokensParams) -> lsp.SemanticTo
             continue
         data += sym.semantic_token
     return lsp.SemanticTokens(data)
+
+
+# Commands
+
+
+@LSP_SERVER.command(JacLanguageServer.CMD_RUN_JAC)
+def run_jac(ls, params: lsp.ExecuteCommandParams):
+    # open a terminal and run the jac command "jac run <file>"
+    command = f"jac run {ls.current_doc.uri.replace('file://', '')}"
+    command = get_command(command)
+    subprocess.Popen(command, shell=True)
+
+
+@LSP_SERVER.command(JacLanguageServer.CMD_TEST_JAC)
+def test_jac(ls, params: lsp.ExecuteCommandParams):
+    # open a terminal and run the jac command "jac test <file>"
+    command = f"jac test {ls.current_doc.uri.replace('file://', '')}"
+    command = get_command(command)
+    subprocess.Popen(command, shell=True)
+
+
+@LSP_SERVER.command(JacLanguageServer.CMD_CLEAN_JAC)
+def clean_jac(ls, params: lsp.ExecuteCommandParams):
+    # open a terminal and run the jac command "jac clean"
+    command = "jac clean"
+    command = get_command(command)
+    subprocess.Popen(command, shell=True)
 
 
 # LSP Server Initialization

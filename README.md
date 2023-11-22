@@ -32,15 +32,17 @@ Overall, the Jaclang Language Extension for VScode is a useful tool for develope
 | File Operations Handling | "workspace/didCreateFiles" | ✅ |
 | | "workspace/didRenameFiles" | ✅ |
 | | "workspace/didDeleteFiles" | ✅ |
-| General Methods | "textDocument/documentSymbol" | ✅ |
+| Semantic Tokens | "textDocument/semanticTokens/full" | ✅ |
+| Symbols | "textDocument/documentSymbol" | ✅ |
+| | "workspace/symbol" | ✅ |
 
 ## Commands
 
 | Command                | Description                         | Status |
 | ---------------------- | ----------------------------------- | ------ |
 | Jaseci: Restart Server | Force re-start the language server. |  ✅   |
-| Jaseci: Run Tests      | Run the Tests in the Workspace  |  🚧   |
-| Jaseci: Run File       | Run the File in the Workspace  |  🚧   |
+| Jaseci: Run Tests      | Run the Tests in the Workspace  |  ✅   |
+| Jaseci: Run File       | Run the File in the Workspace  |  ✅   |
 | Jaseci: Clear Cache    | Clear the Cache  |  🚧   |
 
 ## Settings
