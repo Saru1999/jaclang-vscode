@@ -252,8 +252,11 @@ class Symbol:
     def uses(self, ls: LanguageServer) -> List["Symbol"]:
         for mod_url in ls.jlws.modules.keys():
             for x in ls.jlws.get_uses(mod_url):
-                if x.sym_link == self.ws_symbol:
-                    yield Symbol(x, f"file://{mod_url}", is_use=self)
+                try:
+                    if x.sym_link == self.ws_symbol:
+                        yield Symbol(x, f"file://{mod_url}", is_use=self)
+                except Exception:
+                    continue
 
     def _get_children_doc_sym(self):
         children = []

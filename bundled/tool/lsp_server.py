@@ -354,12 +354,12 @@ def semantic_tokens_full(ls, params: lsp.SemanticTokensParams) -> lsp.SemanticTo
     doc = ls.workspace.get_text_document(uri)
     if not hasattr(doc, "symbols"):
         update_doc_tree(ls, doc.uri)
-    symbols = get_all_symbols(ls, doc)
+    symbols = get_all_symbols(ls, doc, True, True)
     data = []
     for sym in symbols:
         if sym.doc_uri != doc.uri:
             continue
-        data += sym.semantic_tokens
+        data += sym.semantic_token
     return lsp.SemanticTokens(data)
 
 
