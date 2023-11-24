@@ -1,7 +1,6 @@
 {
     "extension.displayName": "Jac",
     "extension.description": "Jaclang is a graph based programming language for AI and ML. This extension provides syntax highlighting , completion, formatting, and linting for Jaclang.",
-    "version": "2023.11.24",
     "command.restartServer": "Restart Server",
     "settings.severity.description": "Mapping from severity of `jac` message type to severity shown in problem window.",
     "settings.importStrategy.description": "Defines where `jaclang` is imported from.",
