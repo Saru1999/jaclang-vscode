@@ -2,7 +2,7 @@
     "name": "jaclang-extension",
     "displayName": "%extension.displayName%",
     "description": "%extension.description%",
-    "version": "2023.9.0",
+    "version": "%version%",
     "preview": true,
     "serverInfo": {
         "name": "Jaclang Language Server",
