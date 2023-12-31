@@ -13,8 +13,8 @@ from lsprotocol.types import (
     DocumentSymbol,
 )
 
-from jaclang.jac.workspace import Workspace
-from jaclang.jac.absyntree import (
+from jaclang.compiler.workspace import Workspace
+from jaclang.compiler.absyntree import (
     AstNode,
     Ability,
     Architype,
@@ -27,7 +27,7 @@ from jaclang.jac.absyntree import (
     ModuleCode,
     AstImplOnlyNode,
 )
-from jaclang.jac.symtable import SymbolTable, Symbol as JSymbol
+from jaclang.compiler.symtable import SymbolTable, Symbol as JSymbol
 
 OFFSET = 1
 

@@ -3,7 +3,7 @@
 
 import:py sys;
 import:py from uuid, UUID, uuid4;
-import:py from jaclang.jac.constant, EdgeDir;
+import:py from jaclang.compiler.constant, EdgeDir;
 
 :obj:Memory:can:get_obj
 (caller_id: UUID, item_id: UUID, override: bool = False) -> Element {

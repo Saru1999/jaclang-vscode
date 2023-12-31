@@ -1,7 +1,7 @@
-from jaclang.jac.passes.transform import Alert
-from jaclang.jac.parser import JacParser
-from jaclang.jac.absyntree import JacSource
-from jaclang.jac.passes.main import pass_schedule
+from jaclang.compiler.passes.transform import Alert
+from jaclang.compiler.parser import JacParser
+from jaclang.compiler.absyntree import JacSource
+from jaclang.compiler.passes.main import pass_schedule
 
 from lsprotocol.types import Diagnostic, DiagnosticSeverity, Position, Range
 from pygls.server import LanguageServer

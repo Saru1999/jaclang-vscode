@@ -2,7 +2,7 @@
 
 import:py from datetime, datetime;
 import:py from uuid, UUID, uuid4;
-import:py from jaclang.jac.constant, EdgeDir;
+import:py from jaclang.compiler.constant, EdgeDir;
 
 include:jac corelib_impl;
 
