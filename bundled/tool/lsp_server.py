@@ -6,15 +6,15 @@ import os
 import pathlib
 from typing import Optional
 import subprocess
+import sys
 
-from common.utils import (
-    normalize_path,
-    update_sys_path,
-    get_symbol_at_pos,
-    show_doc_info,  # noqa: F401
-    get_all_symbols,
-    get_command,
-)
+
+def update_sys_path(path_to_add: str, strategy: str) -> None:
+    if path_to_add not in sys.path and os.path.isdir(path_to_add):
+        if strategy == "useBundled":
+            sys.path.insert(0, path_to_add)
+        else:
+            sys.path.append(path_to_add)
 
 
 # Ensure that we can import LSP libraries, and other bundled libraries.
@@ -42,6 +42,13 @@ from common.logging import log_to_output  # noqa: E402
 from common.constants import (  # noqa: E402
     SEMANTIC_TOKEN_TYPES,
     SEMANTIC_TOKEN_MODIFIERS,
+)
+from common.utils import (  # noqa: E402
+    normalize_path,
+    get_symbol_at_pos,
+    show_doc_info,  # noqa: F401
+    get_all_symbols,
+    get_command,
 )
 
 
