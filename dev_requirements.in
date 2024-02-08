@@ -9,5 +9,5 @@
 pip-tools
 nox
 pytest
-jaclang
+jaclang==0.4.7
 pygls==1.1.1
