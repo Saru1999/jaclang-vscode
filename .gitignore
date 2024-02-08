@@ -12,5 +12,4 @@ bundled/libs/
 **/.pytest_cache
 **/.vs
 
-requirements.txt
-requirements-dev.txt
+dev_requirements.txt
