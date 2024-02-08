@@ -64,10 +64,10 @@ def update_doc_deps(ls: LanguageServer, doc_uri: str) -> None:
     jlws_imports = ls.jlws.get_dependencies(doc_url)
     imports = [
         {
-            "path": f"{Path(doc_url).parent.joinpath(i.path.path_str.replace('.', os.sep))}.jac",
-            "is_jac_import": i.lang.tag.value == "jac",
+            "path": f"{Path(doc_url).parent.joinpath(i.path_str.replace('.', os.sep))}.jac",
+            "is_jac_import": i.parent.lang.tag.value == "jac",
             "line": i.loc.first_line,
-            "uri": f"file://{Path(doc_url).parent.joinpath(i.path.path_str.replace('.', os.sep))}.jac",
+            "uri": f"file://{Path(doc_url).parent.joinpath(i.path_str.replace('.', os.sep))}.jac",
         }
         for i in jlws_imports
     ]
@@ -97,9 +97,7 @@ class Symbol:
         self.node = (
             node.owner
             if isinstance(node, SymbolTable)
-            else node.decl
-            if isinstance(node, JSymbol)
-            else node
+            else node.decl if isinstance(node, JSymbol) else node
         )
         self.doc_uri = doc_uri
 
@@ -241,9 +239,11 @@ class Symbol:
         vars = (
             self.node.get_all_sub_nodes(HasVar)
             if isinstance(self.node, Architype)
-            else self.node.get_all_sub_nodes(ParamVar)
-            if isinstance(self.node, Ability)
-            else []
+            else (
+                self.node.get_all_sub_nodes(ParamVar)
+                if isinstance(self.node, Ability)
+                else []
+            )
         )
         for var in vars:
             var_symbol = Symbol(var, self.doc_uri)

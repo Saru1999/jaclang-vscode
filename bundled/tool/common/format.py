@@ -2,7 +2,7 @@ from jaclang.compiler.passes.tool import (
     FuseCommentsPass,
     JacFormatPass,
 )
-from jaclang.compiler.transpiler import jac_str_to_pass
+from jaclang.compiler.compile import jac_str_to_pass
 
 
 def format_jac(source: str) -> str:
