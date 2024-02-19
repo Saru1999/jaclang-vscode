@@ -52,8 +52,10 @@ def update_doc_tree(ls: LanguageServer, doc_uri: str) -> None:
     doc = ls.workspace.get_text_document(doc_uri)
     try:
         doc.symbols = get_doc_symbols(ls, doc.uri)
+        doc.use_symbols = get_use_symbols(ls, doc.uri)
     except Exception:
         doc.symbols = []
+        doc.use_symbols = []
 
 
 def update_doc_deps(ls: LanguageServer, doc_uri: str) -> None:
@@ -333,7 +335,17 @@ def get_doc_symbols(ls: LanguageServer, doc_uri: str) -> List[Symbol]:
     for sym in module.ir.sym_tab.tab.values():
         if str(sym.sym_type) != "var" or sym.decl.loc.first_line == 0:
             continue
-        symbols.append(Symbol(sym, doc_uri))
+        symbols.append(Symbol(sym, doc_uri)) 
+    return symbols
+
+def get_use_symbols(ls: LanguageServer, doc_uri: str) -> List[Symbol]:
+    symbols: List[Symbol] = []
+    doc_url = doc_uri.replace("file://", "")
+    module = ls.jlws.modules[doc_url]
+    for sym_tab in module.ir.sym_tab.uses:
+        if sym_tab.name != "NAME":
+            continue
+        symbols.append(Symbol(sym_tab, doc_uri))
     return symbols
 
 

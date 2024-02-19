@@ -49,6 +49,8 @@ from common.utils import (  # noqa: E402
     show_doc_info,  # noqa: F401
     get_all_symbols,
     get_command,
+    sort_chunks_relative_to_previous,
+    flatten_chunks,
 )
 
 
@@ -359,7 +361,6 @@ def document_symbol(ls, params: lsp.DocumentSymbolParams) -> list[lsp.DocumentSy
     doc_syms = [s.doc_sym for s in doc.symbols]
     return doc_syms
 
-
 @LSP_SERVER.feature(
     lsp.TEXT_DOCUMENT_SEMANTIC_TOKENS_FULL,
     lsp.SemanticTokensLegend(
@@ -376,8 +377,10 @@ def semantic_tokens_full(ls, params: lsp.SemanticTokensParams) -> lsp.SemanticTo
     for sym in symbols:
         if sym.doc_uri != doc.uri:
             continue
-        data += sym.semantic_token
-    return lsp.SemanticTokens(data)
+        data.append(sym.semantic_token)
+    sorted_chunks = sort_chunks_relative_to_previous(data) 
+    sementic_tokens = flatten_chunks(sorted_chunks)
+    return lsp.SemanticTokens(sementic_tokens)
 
 
 # Commands
