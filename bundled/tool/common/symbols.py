@@ -97,7 +97,9 @@ class Symbol:
         self.node = (
             node.owner
             if isinstance(node, SymbolTable)
-            else node.decl if isinstance(node, JSymbol) else node
+            else node.decl
+            if isinstance(node, JSymbol)
+            else node
         )
         self.doc_uri = doc_uri
 

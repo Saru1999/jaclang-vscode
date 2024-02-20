@@ -124,27 +124,27 @@ async def did_open(ls: server.LanguageServer, params: lsp.DidOpenTextDocumentPar
     It fills the workspace if it is not already filled and validates the parameters.
     """
     ls.current_doc = params.text_document
-    if not ls.workspace_filled:
-        try:
+
+    try:
+        if not ls.workspace_filled:
             fill_workspace(ls)
-        except Exception as e:
-            ls.show_message(f"Error: {e}", lsp.MessageType.Error)
 
-    diagnostics = validate(ls, params)
-    ls.publish_diagnostics(params.text_document.uri, diagnostics)
+        diagnostics = validate(ls, params)
+        ls.publish_diagnostics(params.text_document.uri, diagnostics)
 
-    # if any of the diagnostics are errors, then don't update the document tree
-    if not any(
-        diagnostic.severity == lsp.DiagnosticSeverity.Error
-        for diagnostic in diagnostics
-    ):
-        update_doc_tree(ls, params.text_document.uri)
-        update_doc_deps(ls, params.text_document.uri)
+        # if any of the diagnostics are errors, then don't update the document tree
+        if not any(
+            diagnostic.severity == lsp.DiagnosticSeverity.Error
+            for diagnostic in diagnostics
+        ):
+            update_doc_tree(ls, params.text_document.uri)
+            update_doc_deps(ls, params.text_document.uri)
+
+    except Exception as e:  # Catch potential errors
+        ls.show_message(f"Error during document opening: {e}", lsp.MessageType.Error)
 
 
 # Handle File Operations
-
-
 @LSP_SERVER.feature(
     lsp.WORKSPACE_DID_CREATE_FILES,
     lsp.FileOperationRegistrationOptions(

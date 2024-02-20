@@ -11,4 +11,4 @@
 # Required packages
 pygls==1.1.1
 packaging
-jaclang==0.4.7
+jaclang
