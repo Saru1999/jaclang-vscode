@@ -102,19 +102,22 @@ def did_save(ls, params: lsp.DidSaveTextDocumentParams):
         ls (LanguageServer): The language server instance.
         params (lsp.DidSaveTextDocumentParams): The parameters for the saved text document.
     """
-    doc = ls.workspace.get_text_document(params.text_document.uri)
-    doc.version += 1
+    try:
+        doc = ls.workspace.get_text_document(params.text_document.uri)
+        doc.version += 1
 
-    diagnostics = validate(ls, params, False, True)
-    ls.publish_diagnostics(params.text_document.uri, diagnostics)
+        diagnostics = validate(ls, params, False, True)
+        ls.publish_diagnostics(params.text_document.uri, diagnostics)
 
-    # if any of the diagnostics are errors, then don't update the document tree
-    if not any(
-        diagnostic.severity == lsp.DiagnosticSeverity.Error
-        for diagnostic in diagnostics
-    ):
-        update_doc_tree(ls, params.text_document.uri)
-        update_doc_deps(ls, params.text_document.uri)
+        # if any of the diagnostics are errors, then don't update the document tree
+        if not any(
+            diagnostic.severity == lsp.DiagnosticSeverity.Error
+            for diagnostic in diagnostics
+        ):
+            update_doc_tree(ls, params.text_document.uri)
+            update_doc_deps(ls, params.text_document.uri)
+    except Exception as e:  # Catch potential errors
+        ls.show_message(f"Error during document saving: {e}", lsp.MessageType.Error)
 
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DID_OPEN)
