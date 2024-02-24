@@ -14,9 +14,9 @@ cattrs==23.2.3 \
     --hash=sha256:0341994d94971052e9ee70662542699a3162ea1e0c62f7ce1b4a57f563685108 \
     --hash=sha256:a934090d95abaa9e911dac357e3a8699e0b4b14f8529bcc7d2b1ad9d51672b9f
     # via lsprotocol
-jaclang==0.4.7 \
-    --hash=sha256:3adf8e9c5a881edf338eca6a0053cd7909137dc0ca1ab090c91c3a4d10fd6673 \
-    --hash=sha256:668eb269092ac99b09aa89da78a0ea2b0932956b6f6b5c3c40205923b47ae25d
+jaclang==0.5.5 \
+    --hash=sha256:b5092c5df579faf6e64045d9149cc98e1dca11f3cf3e5b42ee870db80f08ab1a \
+    --hash=sha256:fac82fd211c2342422849e00dc1c9c7c497ac40b5bdfe960174cd6e489ed25e1
     # via -r ./requirements.in
 lsprotocol==2023.0.0b1 \
     --hash=sha256:ade2cd0fa0ede7965698cb59cd05d3adbd19178fd73e83f72ef57a032fbb9d62 \
