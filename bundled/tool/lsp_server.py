@@ -358,7 +358,7 @@ def document_symbol(ls, params: lsp.DocumentSymbolParams) -> list[lsp.DocumentSy
     doc = ls.workspace.get_text_document(uri)
     if not hasattr(doc, "symbols"):
         update_doc_tree(ls, doc.uri)
-    doc_syms = [s.doc_sym for s in doc.symbols]
+    doc_syms = [s.doc_sym for s in doc.symbols if not s.do_skip]
     return doc_syms
 
 @LSP_SERVER.feature(

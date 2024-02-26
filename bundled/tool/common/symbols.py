@@ -24,6 +24,7 @@ from jaclang.compiler.absyntree import (
     WhileStmt,
     WithStmt,
     IterForStmt,
+    InForStmt,
     ModuleCode,
     AstImplOnlyNode,
 )
@@ -102,6 +103,11 @@ class Symbol:
             else node.decl if isinstance(node, JSymbol) else node
         )
         self.doc_uri = doc_uri
+
+
+    @property
+    def do_skip(self):
+        return isinstance(self.node, (IfStmt, WhileStmt, WithStmt, IterForStmt, InForStmt))
 
     @property
     def sym_name(self):
