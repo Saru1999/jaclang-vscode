@@ -186,6 +186,9 @@ def get_all_symbols(
     for sym in doc.symbols:
         if not include_impl and sym.sym_type == "impl":
             continue
+        if sym.do_skip:
+            yield from get_all_children(ls, sym, True)
+            continue
         yield sym
         yield from sym.uses(ls)
         yield from get_all_children(ls, sym, True)
