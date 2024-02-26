@@ -283,8 +283,11 @@ def formatting(ls, params: lsp.DocumentFormattingParams):
     lsp.CompletionOptions(trigger_characters=[".", ":", ""]),
 )
 def completions(params: Optional[lsp.CompletionParams] = None) -> lsp.CompletionList:
-    completion_items = get_completion_items(LSP_SERVER, params)
-    return lsp.CompletionList(is_incomplete=False, items=completion_items)
+    try:
+        completion_items = get_completion_items(LSP_SERVER, params)
+        return lsp.CompletionList(is_incomplete=False, items=completion_items)
+    except Exception as e:
+        LSP_SERVER.show_message(f"Error during completion: {e}", lsp.MessageType.Error)
 
 
 # @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_INLINE_COMPLETION)
@@ -324,22 +327,28 @@ def definition(ls, params: lsp.DefinitionParams):
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_IMPLEMENTATION)
 def implementation(ls, params: lsp.ImplementationParams):
-    doc = ls.workspace.get_text_document(params.text_document.uri)
-    if not hasattr(doc, "symbols"):
-        update_doc_tree(ls, doc.uri)
-    symbol = get_symbol_at_pos(ls, doc, params.position)
-    if symbol is not None:
-        return symbol.impl_loc
+    try:
+        doc = ls.workspace.get_text_document(params.text_document.uri)
+        if not hasattr(doc, "symbols"):
+            update_doc_tree(ls, doc.uri)
+        symbol = get_symbol_at_pos(ls, doc, params.position)
+        if symbol is not None:
+            return symbol.impl_loc
+    except Exception as e:
+        ls.show_message(f"Error during implementation: {e}", lsp.MessageType.Error)
 
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_REFERENCES)
 def references(ls, params: lsp.ReferenceParams):
-    doc = ls.workspace.get_text_document(params.text_document.uri)
-    if not hasattr(doc, "symbols"):
-        update_doc_tree(ls, doc.uri)
-    symbol = get_symbol_at_pos(ls, doc, params.position)
-    if symbol is not None:
-        return [s.location for s in symbol.uses(ls)]
+    try:
+        doc = ls.workspace.get_text_document(params.text_document.uri)
+        if not hasattr(doc, "symbols"):
+            update_doc_tree(ls, doc.uri)
+        symbol = get_symbol_at_pos(ls, doc, params.position)
+        if symbol is not None:
+            return [s.location for s in symbol.uses(ls)]
+    except Exception as e:
+        ls.show_message(f"Error during references: {e}", lsp.MessageType.Error)
 
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_HOVER, lsp.HoverOptions(work_done_progress=True))
@@ -366,23 +375,29 @@ def workspace_symbol(
     ls, params: lsp.WorkspaceSymbolParams
 ) -> list[lsp.SymbolInformation]:
     """Workspace symbols."""
-    symbols = []
-    for doc in ls.workspace.documents.values():
-        if not hasattr(doc, "symbols"):
-            update_doc_tree(ls, doc.uri)
-        symbols.extend([s.sym_info for s in doc.symbols])
-    return symbols
+    try:
+        symbols = []
+        for doc in ls.workspace.documents.values():
+            if not hasattr(doc, "symbols"):
+                update_doc_tree(ls, doc.uri)
+            symbols.extend([s.sym_info for s in doc.symbols])
+        return symbols
+    except Exception as e:
+        ls.show_message(f"Error during workspace symbol: {e}", lsp.MessageType.Error)
 
 
 @LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DOCUMENT_SYMBOL)
 def document_symbol(ls, params: lsp.DocumentSymbolParams) -> list[lsp.DocumentSymbol]:
     """Document symbols."""
-    uri = params.text_document.uri
-    doc = ls.workspace.get_text_document(uri)
-    if not hasattr(doc, "symbols"):
-        update_doc_tree(ls, doc.uri)
-    doc_syms = [s.doc_sym for s in doc.symbols if not s.do_skip]
-    return doc_syms
+    try:
+        uri = params.text_document.uri
+        doc = ls.workspace.get_text_document(uri)
+        if not hasattr(doc, "symbols"):
+            update_doc_tree(ls, doc.uri)
+        doc_syms = [s.doc_sym for s in doc.symbols if not s.do_skip]
+        return doc_syms
+    except Exception as e:
+        ls.show_message(f"Error during document symbol: {e}", lsp.MessageType.Error)
 
 @LSP_SERVER.feature(
     lsp.TEXT_DOCUMENT_SEMANTIC_TOKENS_FULL,
@@ -391,19 +406,22 @@ def document_symbol(ls, params: lsp.DocumentSymbolParams) -> list[lsp.DocumentSy
     ),
 )
 def semantic_tokens_full(ls, params: lsp.SemanticTokensParams) -> lsp.SemanticTokens:
-    uri = params.text_document.uri
-    doc = ls.workspace.get_text_document(uri)
-    if not hasattr(doc, "symbols"):
-        update_doc_tree(ls, doc.uri)
-    symbols = get_all_symbols(ls, doc, True, True)
-    data = []
-    for sym in symbols:
-        if sym.doc_uri != doc.uri:
-            continue
-        data.append(sym.semantic_token)
-    sorted_chunks = sort_chunks_relative_to_previous(data)
-    sementic_tokens = flatten_chunks(sorted_chunks)
-    return lsp.SemanticTokens(sementic_tokens)
+    try:
+        uri = params.text_document.uri
+        doc = ls.workspace.get_text_document(uri)
+        if not hasattr(doc, "symbols"):
+            update_doc_tree(ls, doc.uri)
+        symbols = get_all_symbols(ls, doc, True, True)
+        data = []
+        for sym in symbols:
+            if sym.doc_uri != doc.uri:
+                continue
+            data.append(sym.semantic_token)
+        sorted_chunks = sort_chunks_relative_to_previous(data)
+        sementic_tokens = flatten_chunks(sorted_chunks)
+        return lsp.SemanticTokens(sementic_tokens)
+    except Exception as e:
+        ls.show_message(f"Error during semantic tokens: {e}", lsp.MessageType.Error)
 
 
 # Commands
@@ -439,30 +457,33 @@ def clean_jac(ls, params: lsp.ExecuteCommandParams):
 @LSP_SERVER.feature(lsp.INITIALIZE)
 def initialize(params: lsp.InitializeParams) -> None:
     """LSP handler for initialize request."""
-    log_to_output(LSP_SERVER, f"CWD Server: {os.getcwd()}")
-    import_strategy = os.getenv("LS_IMPORT_STRATEGY", "useBundled")
-    update_sys_path(os.getcwd(), import_strategy)
+    try:
+        log_to_output(LSP_SERVER, f"CWD Server: {os.getcwd()}")
+        import_strategy = os.getenv("LS_IMPORT_STRATEGY", "useBundled")
+        update_sys_path(os.getcwd(), import_strategy)
 
-    GLOBAL_SETTINGS.update(**params.initialization_options.get("globalSettings", {}))
+        GLOBAL_SETTINGS.update(**params.initialization_options.get("globalSettings", {}))
 
-    settings = params.initialization_options["settings"]
-    _update_workspace_settings(settings)
-    log_to_output(
-        LSP_SERVER,
-        f"Settings used to run Server:\r\n{json.dumps(settings, indent=4, ensure_ascii=False)}\r\n",
-    )
-    log_to_output(
-        LSP_SERVER,
-        f"Global settings:\r\n{json.dumps(GLOBAL_SETTINGS, indent=4, ensure_ascii=False)}\r\n",
-    )
+        settings = params.initialization_options["settings"]
+        _update_workspace_settings(settings)
+        log_to_output(
+            LSP_SERVER,
+            f"Settings used to run Server:\r\n{json.dumps(settings, indent=4, ensure_ascii=False)}\r\n",
+        )
+        log_to_output(
+            LSP_SERVER,
+            f"Global settings:\r\n{json.dumps(GLOBAL_SETTINGS, indent=4, ensure_ascii=False)}\r\n",
+        )
 
-    LSP_SERVER.settings = WORKSPACE_SETTINGS[os.getcwd()]
+        LSP_SERVER.settings = WORKSPACE_SETTINGS[os.getcwd()]
 
-    # Add extra paths to sys.path
-    setting = _get_settings_by_path(pathlib.Path(os.getcwd()))
-    for extra in setting.get("extraPaths", []):
-        update_sys_path(extra, import_strategy)
-    fill_workspace(LSP_SERVER)
+        # Add extra paths to sys.path
+        setting = _get_settings_by_path(pathlib.Path(os.getcwd()))
+        for extra in setting.get("extraPaths", []):
+            update_sys_path(extra, import_strategy)
+        fill_workspace(LSP_SERVER)
+    except Exception as e:
+        LSP_SERVER.show_message(f"Error during initialization: {e}", lsp.MessageType.Error)
 
 
 @LSP_SERVER.feature(lsp.WORKSPACE_DID_CHANGE_CONFIGURATION)
